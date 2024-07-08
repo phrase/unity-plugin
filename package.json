@@ -1,0 +1,21 @@
+{
+  "name": "com.phrase.plugin",
+  "version": "1.0.0",
+  "displayName": "Phrase Localization Plugin",
+  "description": "This package provides synchronization with Phrase Strings localization service.",
+  "unity": "2019.1",
+  "unityRelease": "0b5",
+  "documentationUrl": "https://example.com/",
+  "changelogUrl": "https://example.com/changelog.html",
+  "licensesUrl": "https://example.com/licensing.html",
+  "keywords": [
+    "localization",
+    "translation",
+    "phrase"
+  ],
+  "author": {
+    "name": "Phrase",
+    "email": "support@phrase.com",
+    "url": "https://www.phrase.com"
+  }
+}
