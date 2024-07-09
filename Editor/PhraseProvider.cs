@@ -18,6 +18,8 @@ namespace Phrase
 
         public List<Project> Projects { get; private set; } = new List<Project>();
 
+        public string m_selectedProjectId = null;
+
         public void FetchProjects()
         {
             Client client = new Client(m_ApiKey, m_ApiUrl);
@@ -74,6 +76,8 @@ namespace Phrase
     [CustomEditor(typeof(PhraseProvider))]
     public class PhraseEditor : Editor
     {
+        bool m_showTables = false;
+
         public override void OnInspectorGUI()
         {
             PhraseProvider phraseProvider = target as PhraseProvider;
@@ -81,23 +85,69 @@ namespace Phrase
 
             EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiUrl"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiKey"));
+            serializedObject.ApplyModifiedProperties();
+
             if (GUILayout.Button("Fetch Projects"))
             {
                 phraseProvider.FetchProjects();
             }
             string[] projectNames = phraseProvider.Projects.Select(p => p.name).ToArray();
-            int selectedProject = EditorGUILayout.Popup("Project", 0, projectNames);
+            int selectedProjectIndex = phraseProvider.Projects.FindIndex(p => p.id == phraseProvider.m_selectedProjectId);
 
-            serializedObject.ApplyModifiedProperties();
-
-            if (GUILayout.Button("Push"))
+            int selectedProject = EditorGUILayout.Popup("Project", selectedProjectIndex, projectNames);
+            if (selectedProject >= 0)
             {
-                phraseProvider.PushAll();
+                phraseProvider.m_selectedProjectId = phraseProvider.Projects[selectedProject].id;
             }
 
-            if (GUILayout.Button("Pull"))
+            m_showTables = EditorGUILayout.BeginFoldoutHeaderGroup(m_showTables, "Connected string tables");
+            if (m_showTables)
             {
-                phraseProvider.PullAll();
+                List<StringTableCollection> collections = phraseProvider.AllStringTableCollections();
+                foreach (StringTableCollection collection in collections)
+                {
+                    var extension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
+                    bool selectedState = extension != null && extension.m_provider != null;
+                    bool newSelectedState = EditorGUILayout.ToggleLeft(collection.name, selectedState);
+                    if (newSelectedState != selectedState)
+                    {
+                        TogglePhraseExtension(collection, newSelectedState);
+                    }
+                }
+            }
+
+            using (new EditorGUI.DisabledScope(selectedProject < 0))
+            {
+                if (GUILayout.Button("Push"))
+                {
+                    phraseProvider.PushAll();
+                }
+
+                if (GUILayout.Button("Pull"))
+                {
+                    phraseProvider.PullAll();
+                }
+            }
+        }
+
+        private void TogglePhraseExtension(StringTableCollection collection, bool selectedState)
+        {
+            PhraseExtension extension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
+            if (selectedState)
+            {
+                if (extension == null)
+                {
+                    extension = new PhraseExtension();
+                    collection.AddExtension(extension);
+                }
+                extension.m_provider = target as PhraseProvider;
+            }
+            else
+            {
+                if (extension != null)
+                {
+                    collection.RemoveExtension(extension);
+                }
             }
         }
     }
