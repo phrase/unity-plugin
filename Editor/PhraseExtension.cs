@@ -7,5 +7,7 @@ namespace Phrase
     public class PhraseExtension : CollectionExtension
     {
         public PhraseProvider m_provider;
+
+        public string m_keyPrefix;
     }
 }

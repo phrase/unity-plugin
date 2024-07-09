@@ -1,4 +1,5 @@
 using UnityEditor;
+using UnityEditor.Localization;
 using UnityEditor.Localization.UI;
 using UnityEngine;
 
@@ -12,6 +13,8 @@ namespace Phrase
         // public PhraseProvider Provider => m_provider.objectReferenceValue as PhraseProvider;
 
         private SerializedProperty m_provider;
+
+        private SerializedProperty m_keyPrefix;
 
         private PhraseProvider provider => m_provider.objectReferenceValue as PhraseProvider;
 
@@ -28,9 +31,11 @@ namespace Phrase
             EditorGUI.LabelField(position, EditorGUIUtility.TrTextContent("Phrase", icon), EditorStyles.boldLabel);
             position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
 
+            m_keyPrefix = property.FindPropertyRelative("m_keyPrefix");
             m_provider = property.FindPropertyRelative("m_provider");
-
             EditorGUI.PropertyField(position, m_provider);
+            position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
+            EditorGUI.PropertyField(position, m_keyPrefix);
             position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
 
             // add push and pull buttons
@@ -44,13 +49,17 @@ namespace Phrase
                     buttonPosition.width = buttonWidth;
                     if (GUI.Button(buttonPosition, "Push"))
                     {
-                        provider.Push();
+                        var extension = property.GetActualObjectForSerializedProperty<PhraseExtension>(fieldInfo);
+                        var collection = extension.TargetCollection as StringTableCollection;
+                        provider.Push(collection);
                     }
 
                     buttonPosition.x += buttonWidth + EditorGUIUtility.standardVerticalSpacing;
                     if (GUI.Button(buttonPosition, "Pull"))
                     {
-                        provider.Pull();
+                        // var target = property.GetActualObjectForSerializedProperty<PhraseExtension>(fieldInfo);
+                        // var collection = target.TargetCollection as StringTableCollection;
+                        // provider.Pull(collection);
                     }
                     position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
                 }
@@ -60,7 +69,7 @@ namespace Phrase
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            return EditorGUIUtility.singleLineHeight * 3 + EditorGUIUtility.standardVerticalSpacing * 2;
+            return EditorGUIUtility.singleLineHeight * 4 + EditorGUIUtility.standardVerticalSpacing * 2;
         }
     }
 }
