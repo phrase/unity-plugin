@@ -48,45 +48,7 @@ namespace Phrase
             this.apiUrl = apiUrl;
         }
 
-        public string DownloadLocale(string projectID, string localeID)
-        {
-            string url = string.Format("{0}/projects/{1}/locales/{2}/download?file_format=xlf&include_empty_translations=true", apiUrl, projectID, localeID);
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-
-            NetworkCredential myNetworkCredential = new NetworkCredential(accessToken, "");
-            Uri uri = new Uri(url);
-            request.PreAuthenticate = true;
-            CredentialCache myCredentialCache = new CredentialCache();
-            myCredentialCache.Add(uri, "Basic", myNetworkCredential);
-            request.Credentials = myCredentialCache;
-
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            StreamReader reader = new StreamReader(response.GetResponseStream());
-            string content = reader.ReadToEnd();
-            return content;
-        }
-
-        public List<Locale> ListLocales(string projectID)
-        {
-            string url = string.Format("{0}/projects/{1}/locales/", apiUrl, projectID);
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-
-            NetworkCredential myNetworkCredential = new NetworkCredential(accessToken, "");
-            Uri uri = new Uri(url);
-            request.PreAuthenticate = true;
-            CredentialCache myCredentialCache = new CredentialCache();
-            myCredentialCache.Add(uri, "Basic", myNetworkCredential);
-            request.Credentials = myCredentialCache;
-
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            StreamReader reader = new StreamReader(response.GetResponseStream());
-            string jsonResponse = reader.ReadToEnd();
-            return JsonConvert.DeserializeObject<List<Locale>>(jsonResponse);
-        }
-
-        public List<Project> ListProjects()
-        {
-            string url = string.Format("{0}/projects?per_page=100", apiUrl);
+        private HttpWebRequest createRequest(string url) {
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 
             NetworkCredential myNetworkCredential = new NetworkCredential(accessToken, "");
@@ -96,13 +58,39 @@ namespace Phrase
             myCredentialCache.Add(uri, "Basic", myNetworkCredential);
             request.Credentials = myCredentialCache;
             request.UserAgent = "Unity Plugin/1.0";
+            return request;
+        }
 
+        public string DownloadLocale(string projectID, string localeID)
+        {
+            string url = string.Format("{0}/projects/{1}/locales/{2}/download?file_format=xlf&include_empty_translations=true", apiUrl, projectID, localeID);
+            HttpWebRequest request = createRequest(url);
+            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+            StreamReader reader = new StreamReader(response.GetResponseStream());
+            string content = reader.ReadToEnd();
+            return content;
+        }
+
+
+        public List<Locale> ListLocales(string projectID)
+        {
+            string url = string.Format("{0}/projects/{1}/locales", apiUrl, projectID);
+            HttpWebRequest request = createRequest(url);
+            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+            StreamReader reader = new StreamReader(response.GetResponseStream());
+            string jsonResponse = reader.ReadToEnd();
+            return JsonConvert.DeserializeObject<List<Locale>>(jsonResponse);
+        }
+
+        public List<Project> ListProjects()
+        {
+            string url = string.Format("{0}/projects?per_page=100", apiUrl);
+            HttpWebRequest request = createRequest(url);
             HttpWebResponse response = (HttpWebResponse)request.GetResponse();
             StreamReader reader = new StreamReader(response.GetResponseStream());
             string jsonResponse = reader.ReadToEnd();
             return JsonConvert.DeserializeObject<List<Project>>(jsonResponse);
         }
-
 
         public void UploadFile(string translations, string projectID, string localeID, bool useAutopilot)
         {

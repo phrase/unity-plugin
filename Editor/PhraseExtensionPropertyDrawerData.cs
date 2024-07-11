@@ -57,9 +57,9 @@ namespace Phrase
                     buttonPosition.x += buttonWidth + EditorGUIUtility.standardVerticalSpacing;
                     if (GUI.Button(buttonPosition, "Pull"))
                     {
-                        // var target = property.GetActualObjectForSerializedProperty<PhraseExtension>(fieldInfo);
-                        // var collection = target.TargetCollection as StringTableCollection;
-                        // provider.Pull(collection);
+                        var extension = property.GetActualObjectForSerializedProperty<PhraseExtension>(fieldInfo);
+                        var collection = extension.TargetCollection as StringTableCollection;
+                        provider.Pull(collection);
                     }
                     position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
                 }

@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Localization;
+using UnityEditor.Localization.Plugins.XLIFF;
 using static Phrase.Client;
 
 namespace Phrase
@@ -18,12 +19,25 @@ namespace Phrase
 
         public List<Project> Projects { get; private set; } = new List<Project>();
 
+        public List<Locale> Locales { get; private set; } = new List<Locale>();
+
+        [SerializeField]
         public string m_selectedProjectId = null;
 
         public void FetchProjects()
         {
             Client client = new Client(m_ApiKey, m_ApiUrl);
             Projects = client.ListProjects();
+        }
+
+        public void FetchLocales()
+        {
+            if (m_selectedProjectId == null)
+            {
+                return;
+            }
+            Client client = new Client(m_ApiKey, m_ApiUrl);
+            Locales = client.ListLocales(m_selectedProjectId);
         }
 
         public List<StringTableCollection> AllStringTableCollections()
@@ -70,6 +84,19 @@ namespace Phrase
         {
             Debug.Log("Pull");
             Debug.Log(collection);
+            foreach(var stringTable in collection.StringTables) {
+                // find the locale
+                var selectedLocale = Locales.FirstOrDefault(l => l.code == stringTable.LocaleIdentifier.Code);
+                if (selectedLocale != null) {
+                    Debug.Log("Downloading locale " + selectedLocale.code);
+                    Client client = new Client(m_ApiKey, m_ApiUrl);
+                    string content = client.DownloadLocale(m_selectedProjectId, selectedLocale.id);
+                    using (var stream = new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)))
+                    {
+                        Xliff.ImportDocumentIntoTable(XliffDocument.Parse(stream), stringTable);
+                    }
+                }
+            }
         }
     }
 
@@ -94,11 +121,16 @@ namespace Phrase
             string[] projectNames = phraseProvider.Projects.Select(p => p.name).ToArray();
             int selectedProjectIndex = phraseProvider.Projects.FindIndex(p => p.id == phraseProvider.m_selectedProjectId);
 
-            int selectedProject = EditorGUILayout.Popup("Project", selectedProjectIndex, projectNames);
-            if (selectedProject >= 0)
+            int selectedProjectIndexNew = EditorGUILayout.Popup("Project", selectedProjectIndex, projectNames);
+            if (selectedProjectIndexNew != selectedProjectIndex)
             {
-                phraseProvider.m_selectedProjectId = phraseProvider.Projects[selectedProject].id;
+                selectedProjectIndex = selectedProjectIndexNew;
+                phraseProvider.m_selectedProjectId = phraseProvider.Projects[selectedProjectIndex].id;
+                phraseProvider.FetchLocales();
+
             }
+            string[] localeNames = phraseProvider.Locales.Select(l => l.name).ToArray();
+            EditorGUILayout.Popup("Locale", 0, localeNames);
 
             m_showTables = EditorGUILayout.BeginFoldoutHeaderGroup(m_showTables, "Connected string tables");
             if (m_showTables)
@@ -116,7 +148,7 @@ namespace Phrase
                 }
             }
 
-            using (new EditorGUI.DisabledScope(selectedProject < 0))
+            using (new EditorGUI.DisabledScope(selectedProjectIndex < 0))
             {
                 if (GUILayout.Button("Push"))
                 {
