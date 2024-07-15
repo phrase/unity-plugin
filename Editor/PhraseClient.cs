@@ -49,6 +49,7 @@ namespace Phrase
         }
 
         private HttpWebRequest createRequest(string url) {
+            Debug.Log("Creating request to " + url);
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 
             NetworkCredential myNetworkCredential = new NetworkCredential(accessToken, "");
@@ -92,14 +93,14 @@ namespace Phrase
             return JsonConvert.DeserializeObject<List<Project>>(jsonResponse);
         }
 
-        public void UploadFile(string translations, string projectID, string localeID, bool useAutopilot)
+        public void UploadFile(string translations, string projectID, string localeID, bool autoTranslate)
         {
             string url = string.Format("{0}/projects/{1}/uploads", apiUrl, projectID);
             NameValueCollection nvc = new NameValueCollection();
             nvc.Add("locale_id", localeID);
             nvc.Add("file_format", "xlf");
-            nvc.Add("autotranslate", useAutopilot.ToString());
-            nvc.Add("format_options[\"key_name_attribute\"]", "resname");
+            nvc.Add("autotranslate", autoTranslate.ToString());
+            nvc.Add("format_options[key_name_attribute]", "resname");
 
             byte[] content = Encoding.ASCII.GetBytes(translations);
 
@@ -120,18 +121,10 @@ namespace Phrase
             string boundary = "---------------------------" + DateTime.Now.Ticks.ToString("x");
             byte[] boundarybytes = Encoding.ASCII.GetBytes("\r\n--" + boundary + "\r\n");
 
-            HttpWebRequest wr = (HttpWebRequest)WebRequest.Create(url);
+            HttpWebRequest wr = createRequest(url);
             wr.ContentType = "multipart/form-data; boundary=" + boundary;
             wr.Method = "POST";
             wr.KeepAlive = true;
-
-            NetworkCredential myNetworkCredential = new NetworkCredential(accessToken, "");
-
-            Uri uri = new Uri(url);
-            wr.PreAuthenticate = true;
-            CredentialCache myCredentialCache = new CredentialCache();
-            myCredentialCache.Add(uri, "Basic", myNetworkCredential);
-            wr.Credentials = myCredentialCache;
 
             Stream rs = wr.GetRequestStream();
 
@@ -139,7 +132,7 @@ namespace Phrase
             foreach (string key in nvc.Keys)
             {
                 rs.Write(boundarybytes, 0, boundarybytes.Length);
-                string formitem = string.Format(formdataTemplate, key, nvc[key]);
+                string formitem = string.Format(formdataTemplate, key.Replace(@"\", @"\\").Replace(@"""", @"\"""), nvc[key]);
                 byte[] formitembytes = Encoding.UTF8.GetBytes(formitem);
                 rs.Write(formitembytes, 0, formitembytes.Length);
             }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEngine;
 using UnityEditor;
@@ -17,12 +18,17 @@ namespace Phrase
         [SerializeField]
         public string m_ApiKey;
 
+        [SerializeField]
         public List<Project> Projects { get; private set; } = new List<Project>();
 
+        [SerializeField]
         public List<Locale> Locales { get; private set; } = new List<Locale>();
 
         [SerializeField]
         public string m_selectedProjectId = null;
+
+        [SerializeField]
+        public string m_selectedLocaleId = null;
 
         public void FetchProjects()
         {
@@ -56,14 +62,22 @@ namespace Phrase
             {
                 Debug.Log(collection);
                 // iterate the serialized properties
-                foreach (var extension in collection.Extensions)
+                var phraseExtension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
+                if (phraseExtension != null)
                 {
-                    if (extension is PhraseExtension phraseExtension)
+                    Debug.Log(phraseExtension.m_keyPrefix);
+                    // Debug.Log(phraseExtension.m_provider);
+                    if (m_selectedLocaleId == null)
                     {
-                        Debug.Log(phraseExtension.m_keyPrefix);
-                        Debug.Log(phraseExtension.m_provider);
-                        // var provider = phraseExtension.m_provider;
-                        // provider.Push(collection);
+                        Push(collection);
+                    }
+                    else
+                    {
+                        var selectedLocale = Locales.FirstOrDefault(l => l.id == m_selectedLocaleId);
+                        if (selectedLocale != null)
+                        {
+                            Push(collection, selectedLocale);
+                        }
                     }
                 }
             }
@@ -78,6 +92,27 @@ namespace Phrase
         {
             Debug.Log("Push");
             Debug.Log(collection);
+        }
+
+        public void Push(StringTableCollection collection, Locale locale)
+        {
+            Debug.Log("Push");
+            Debug.Log(collection);
+            Debug.Log(locale);
+
+            var matchingStringTable = collection.StringTables.FirstOrDefault(st => st.LocaleIdentifier.Code == locale.code);
+            if (matchingStringTable == null)
+            {
+                Debug.LogError("No matching string table found for locale " + locale.code);
+                return;
+            }
+            const string dir = "Temp/";
+            string path = dir + matchingStringTable.name + ".xlf";
+            Xliff.Export(matchingStringTable, dir, XliffVersion.V12, new[] { matchingStringTable });
+            var xlfContent = File.ReadAllText(path);
+            Client client = new Client(m_ApiKey, m_ApiUrl);
+            client.UploadFile(xlfContent, m_selectedProjectId, locale.id, false);
+            // if (File.Exists(path)) File.Delete(path);
         }
 
         public void Pull(StringTableCollection collection)
@@ -130,7 +165,13 @@ namespace Phrase
 
             }
             string[] localeNames = phraseProvider.Locales.Select(l => l.name).ToArray();
-            EditorGUILayout.Popup("Locale", 0, localeNames);
+            int selectedLocaleIndex = phraseProvider.Locales.FindIndex(l => l.id == phraseProvider.m_selectedLocaleId);
+            int selectedLocaleIndexNew = EditorGUILayout.Popup("Locale", selectedLocaleIndex, localeNames);
+            if (selectedLocaleIndexNew != selectedLocaleIndex)
+            {
+                selectedLocaleIndex = selectedLocaleIndexNew;
+                phraseProvider.m_selectedLocaleId = phraseProvider.Locales[selectedLocaleIndex].id;
+            }
 
             m_showTables = EditorGUILayout.BeginFoldoutHeaderGroup(m_showTables, "Connected string tables");
             if (m_showTables)
