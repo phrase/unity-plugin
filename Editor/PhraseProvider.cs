@@ -72,45 +72,60 @@ namespace Phrase
 
         public void PushAll()
         {
-            List<StringTableCollection> collections = AllStringTableCollections();
+            int count = 0;
+            List<StringTableCollection> collections = ConnectedStringTableCollections();
             foreach (StringTableCollection collection in collections)
             {
-                Debug.Log(collection);
                 // iterate the serialized properties
                 var phraseExtension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
                 if (phraseExtension != null)
                 {
                     Debug.Log(phraseExtension.m_keyPrefix);
-                    // Debug.Log(phraseExtension.m_provider);
-                    if (m_selectedLocaleId == null)
-                    {
-                        Push(collection);
-                    }
-                    else
-                    {
-                        var selectedLocale = Locales.FirstOrDefault(l => l.id == m_selectedLocaleId);
-                        if (selectedLocale != null)
-                        {
-                            Push(collection, selectedLocale);
-                        }
-                    }
+                    // if (m_selectedLocaleId == null)
+                    // {
+                        count += Push(collection);
+                    // }
+                    // else
+                    // {
+                    //     var selectedLocale = Locales.FirstOrDefault(l => l.id == m_selectedLocaleId);
+                    //     if (selectedLocale != null)
+                    //     {
+                    //         Push(collection, selectedLocale);
+                    //     }
+                    // }
                 }
             }
+            EditorUtility.DisplayDialog("Push complete", $"{count} locale(s) from {collections.Count} table collection(s) pushed.", "OK");
         }
 
         public void PullAll()
         {
             Debug.Log(LocalizationSettings.AvailableLocales.Locales.Count);
+            int totalLocaleCount = 0;
+            int totalCount = 0;
             foreach (StringTableCollection collection in ConnectedStringTableCollections())
             {
-                Pull(collection);
+                totalLocaleCount += Pull(collection);
+                totalCount++;
             }
+            EditorUtility.DisplayDialog("Pull complete", $"{totalCount} locale(s) in {totalCount} table collection(s) imported.", "OK");
         }
 
-        public void Push(StringTableCollection collection)
+        public int Push(StringTableCollection collection)
         {
             Debug.Log("Push");
             Debug.Log(collection);
+            int count = 0;
+            foreach (var stringTable in collection.StringTables)
+            {
+                Locale locale = Locales.FirstOrDefault(l => l.code == stringTable.LocaleIdentifier.Code);
+                if (locale != null)
+                {
+                    Push(collection, locale);
+                    count++;
+                }
+            }
+            return count;
         }
 
         public void Push(StringTableCollection collection, Locale locale)
@@ -134,10 +149,11 @@ namespace Phrase
             // if (File.Exists(path)) File.Delete(path);
         }
 
-        public void Pull(StringTableCollection collection)
+        public int Pull(StringTableCollection collection)
         {
             Debug.Log("Pull");
             Debug.Log(collection);
+            int count = 0;
             foreach(var stringTable in collection.StringTables) {
                 // find the locale
                 var selectedLocale = Locales.FirstOrDefault(l => l.code == stringTable.LocaleIdentifier.Code);
@@ -152,6 +168,7 @@ namespace Phrase
                     using (var stream = new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)))
                     {
                         Xliff.ImportDocumentIntoTable(XliffDocument.Parse(stream), stringTable);
+                        count++;
                     }
                 }
                 else
@@ -159,6 +176,7 @@ namespace Phrase
                     Debug.Log("No Phrase locale found for string table " + stringTable.LocaleIdentifier.Code);
                 }
             }
+            return count;
         }
     }
 
