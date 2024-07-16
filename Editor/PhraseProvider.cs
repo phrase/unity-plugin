@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.Localization;
 using UnityEditor.Localization.Plugins.XLIFF;
+using UnityEngine.Localization.Settings;
 using static Phrase.Client;
 
 namespace Phrase
@@ -25,13 +26,16 @@ namespace Phrase
         public List<Locale> Locales { get; private set; } = new List<Locale>();
 
         [SerializeField]
-        public List<Locale> LocalesToPull { get; private set; } = new List<Locale>();
+        public List<string> LocaleIdsToPull { get; private set; } = new List<string>();
 
         [SerializeField]
         public string m_selectedProjectId = null;
 
         [SerializeField]
         public string m_selectedLocaleId = null;
+
+        [SerializeField]
+        public bool m_pullOnlySelected = false;
 
         public void FetchProjects()
         {
@@ -47,6 +51,7 @@ namespace Phrase
             }
             Client client = new Client(m_ApiKey, m_ApiUrl);
             Locales = client.ListLocales(m_selectedProjectId);
+            LocaleIdsToPull.Clear();
         }
 
         public List<StringTableCollection> AllStringTableCollections()
@@ -55,6 +60,13 @@ namespace Phrase
                 .FindAssets("t:StringTableCollection")
                 .Select(AssetDatabase.GUIDToAssetPath)
                 .Select(AssetDatabase.LoadAssetAtPath<StringTableCollection>)
+                .ToList();
+        }
+
+        public List<StringTableCollection> ConnectedStringTableCollections()
+        {
+            return AllStringTableCollections()
+                .Where(collection => collection.Extensions.Any(e => e is PhraseExtension))
                 .ToList();
         }
 
@@ -88,7 +100,11 @@ namespace Phrase
 
         public void PullAll()
         {
-            // Debug.Log(LocalizationSettings.AvailableLocales);
+            Debug.Log(LocalizationSettings.AvailableLocales.Locales.Count);
+            foreach (StringTableCollection collection in ConnectedStringTableCollections())
+            {
+                Pull(collection);
+            }
         }
 
         public void Push(StringTableCollection collection)
@@ -126,6 +142,10 @@ namespace Phrase
                 // find the locale
                 var selectedLocale = Locales.FirstOrDefault(l => l.code == stringTable.LocaleIdentifier.Code);
                 if (selectedLocale != null) {
+                    if (m_pullOnlySelected && !LocaleIdsToPull.Contains(selectedLocale.id))
+                    {
+                        continue;
+                    }
                     Debug.Log("Downloading locale " + selectedLocale.code);
                     Client client = new Client(m_ApiKey, m_ApiUrl);
                     string content = client.DownloadLocale(m_selectedProjectId, selectedLocale.id);
@@ -133,6 +153,10 @@ namespace Phrase
                     {
                         Xliff.ImportDocumentIntoTable(XliffDocument.Parse(stream), stringTable);
                     }
+                }
+                else
+                {
+                    Debug.Log("No Phrase locale found for string table " + stringTable.LocaleIdentifier.Code);
                 }
             }
         }
@@ -142,8 +166,6 @@ namespace Phrase
     public class PhraseEditor : Editor
     {
         bool m_showTables = false;
-
-        bool m_pullOnlySelected = false;
 
         public override void OnInspectorGUI()
         {
@@ -167,14 +189,13 @@ namespace Phrase
                 selectedProjectIndex = selectedProjectIndexNew;
                 phraseProvider.m_selectedProjectId = phraseProvider.Projects[selectedProjectIndex].id;
                 phraseProvider.FetchLocales();
-
             }
 
             m_showTables = EditorGUILayout.BeginFoldoutHeaderGroup(m_showTables, "Connected string tables");
             if (m_showTables)
             {
-                List<StringTableCollection> collections = phraseProvider.AllStringTableCollections();
-                foreach (StringTableCollection collection in collections)
+                List<StringTableCollection> allCollections = phraseProvider.AllStringTableCollections();
+                foreach (StringTableCollection collection in allCollections)
                 {
                     var extension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
                     bool selectedState = extension != null && extension.m_provider != null;
@@ -193,28 +214,29 @@ namespace Phrase
                     phraseProvider.PushAll();
                 }
 
-                m_pullOnlySelected = EditorGUILayout.BeginToggleGroup("Pull only selected locales:", m_pullOnlySelected);
+                phraseProvider.m_pullOnlySelected = EditorGUILayout.BeginToggleGroup("Pull only selected locales:", phraseProvider.m_pullOnlySelected);
 
                 foreach (var locale in phraseProvider.Locales)
                 {
-                    bool selectedState = phraseProvider.LocalesToPull.Contains(locale);
-                    string label = locale.name == locale.code ? locale.name : $"{locale.name} ({locale.code})";
-                    bool newSelectedState = EditorGUILayout.ToggleLeft(label, selectedState);
+                    bool selectedState = phraseProvider.LocaleIdsToPull.Contains(locale.id);
+                    string localeLabel = locale.name == locale.code ? locale.name : $"{locale.name} ({locale.code})";
+                    bool newSelectedState = EditorGUILayout.ToggleLeft(localeLabel, selectedState);
                     if (newSelectedState != selectedState)
                     {
                         if (newSelectedState)
                         {
-                            phraseProvider.LocalesToPull.Add(locale);
+                            phraseProvider.LocaleIdsToPull.Add(locale.id);
                         }
                         else
                         {
-                            phraseProvider.LocalesToPull.Remove(locale);
+                            phraseProvider.LocaleIdsToPull.Remove(locale.id);
                         }
                     }
                 }
 
                 EditorGUILayout.EndToggleGroup();
-                if (GUILayout.Button("Pull"))
+                string pullButtonLabel = phraseProvider.m_pullOnlySelected ? "Pull selected" : "Pull all";
+                if (GUILayout.Button(pullButtonLabel))
                 {
                     phraseProvider.PullAll();
                 }
