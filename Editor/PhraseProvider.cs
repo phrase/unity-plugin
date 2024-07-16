@@ -25,6 +25,9 @@ namespace Phrase
         public List<Locale> Locales { get; private set; } = new List<Locale>();
 
         [SerializeField]
+        public List<Locale> LocalesToPull { get; private set; } = new List<Locale>();
+
+        [SerializeField]
         public string m_selectedProjectId = null;
 
         [SerializeField]
@@ -85,7 +88,7 @@ namespace Phrase
 
         public void PullAll()
         {
-            // Pull the data from Phrase
+            // Debug.Log(LocalizationSettings.AvailableLocales);
         }
 
         public void Push(StringTableCollection collection)
@@ -140,6 +143,8 @@ namespace Phrase
     {
         bool m_showTables = false;
 
+        bool m_pullOnlySelected = false;
+
         public override void OnInspectorGUI()
         {
             PhraseProvider phraseProvider = target as PhraseProvider;
@@ -163,14 +168,6 @@ namespace Phrase
                 phraseProvider.m_selectedProjectId = phraseProvider.Projects[selectedProjectIndex].id;
                 phraseProvider.FetchLocales();
 
-            }
-            string[] localeNames = phraseProvider.Locales.Select(l => l.name).ToArray();
-            int selectedLocaleIndex = phraseProvider.Locales.FindIndex(l => l.id == phraseProvider.m_selectedLocaleId);
-            int selectedLocaleIndexNew = EditorGUILayout.Popup("Locale", selectedLocaleIndex, localeNames);
-            if (selectedLocaleIndexNew != selectedLocaleIndex)
-            {
-                selectedLocaleIndex = selectedLocaleIndexNew;
-                phraseProvider.m_selectedLocaleId = phraseProvider.Locales[selectedLocaleIndex].id;
             }
 
             m_showTables = EditorGUILayout.BeginFoldoutHeaderGroup(m_showTables, "Connected string tables");
@@ -196,6 +193,27 @@ namespace Phrase
                     phraseProvider.PushAll();
                 }
 
+                m_pullOnlySelected = EditorGUILayout.BeginToggleGroup("Pull only selected locales:", m_pullOnlySelected);
+
+                foreach (var locale in phraseProvider.Locales)
+                {
+                    bool selectedState = phraseProvider.LocalesToPull.Contains(locale);
+                    string label = locale.name == locale.code ? locale.name : $"{locale.name} ({locale.code})";
+                    bool newSelectedState = EditorGUILayout.ToggleLeft(label, selectedState);
+                    if (newSelectedState != selectedState)
+                    {
+                        if (newSelectedState)
+                        {
+                            phraseProvider.LocalesToPull.Add(locale);
+                        }
+                        else
+                        {
+                            phraseProvider.LocalesToPull.Remove(locale);
+                        }
+                    }
+                }
+
+                EditorGUILayout.EndToggleGroup();
                 if (GUILayout.Button("Pull"))
                 {
                     phraseProvider.PullAll();
