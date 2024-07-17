@@ -17,5 +17,8 @@
     "name": "Phrase",
     "email": "support@phrase.com",
     "url": "https://www.phrase.com"
+  },
+  "dependencies": {
+    "com.unity.localization": "1.5.0"
   }
 }
