@@ -35,6 +35,9 @@ namespace Phrase
         public string m_selectedLocaleId = null;
 
         [SerializeField]
+        public bool m_pushOnlySelected = false;
+
+        [SerializeField]
         public bool m_pullOnlySelected = false;
 
         public void FetchProjects()
@@ -80,19 +83,21 @@ namespace Phrase
                 var phraseExtension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
                 if (phraseExtension != null)
                 {
-                    Debug.Log(phraseExtension.m_keyPrefix);
-                    // if (m_selectedLocaleId == null)
-                    // {
+                    // Debug.Log(phraseExtension.m_keyPrefix);
+                    if (m_pushOnlySelected && m_selectedLocaleId != null)
+                    {
+                        Debug.Log("Looking for locale " + m_selectedLocaleId);
+                        var selectedLocale = Locales.FirstOrDefault(l => l.code == m_selectedLocaleId);
+                        if (selectedLocale != null)
+                        {
+                            Debug.Log("Pushing locale " + selectedLocale.code);
+                            Push(collection, selectedLocale);
+                        }
+                    }
+                    else
+                    {
                         count += Push(collection);
-                    // }
-                    // else
-                    // {
-                    //     var selectedLocale = Locales.FirstOrDefault(l => l.id == m_selectedLocaleId);
-                    //     if (selectedLocale != null)
-                    //     {
-                    //         Push(collection, selectedLocale);
-                    //     }
-                    // }
+                    }
                 }
             }
             EditorUtility.DisplayDialog("Push complete", $"{count} locale(s) from {collections.Count} table collection(s) pushed.", "OK");
@@ -100,7 +105,6 @@ namespace Phrase
 
         public void PullAll()
         {
-            Debug.Log(LocalizationSettings.AvailableLocales.Locales.Count);
             int totalLocaleCount = 0;
             int totalCount = 0;
             foreach (StringTableCollection collection in ConnectedStringTableCollections())
@@ -113,8 +117,6 @@ namespace Phrase
 
         public int Push(StringTableCollection collection)
         {
-            Debug.Log("Push");
-            Debug.Log(collection);
             int count = 0;
             foreach (var stringTable in collection.StringTables)
             {
@@ -130,10 +132,6 @@ namespace Phrase
 
         public void Push(StringTableCollection collection, Locale locale)
         {
-            Debug.Log("Push");
-            Debug.Log(collection);
-            Debug.Log(locale);
-
             var matchingStringTable = collection.StringTables.FirstOrDefault(st => st.LocaleIdentifier.Code == locale.code);
             if (matchingStringTable == null)
             {
@@ -146,13 +144,11 @@ namespace Phrase
             var xlfContent = File.ReadAllText(path);
             Client client = new Client(m_ApiKey, m_ApiUrl);
             client.UploadFile(xlfContent, m_selectedProjectId, locale.id, false);
-            // if (File.Exists(path)) File.Delete(path);
+            if (File.Exists(path)) File.Delete(path);
         }
 
         public int Pull(StringTableCollection collection)
         {
-            Debug.Log("Pull");
-            Debug.Log(collection);
             int count = 0;
             foreach(var stringTable in collection.StringTables) {
                 // find the locale
@@ -227,7 +223,20 @@ namespace Phrase
 
             using (new EditorGUI.DisabledScope(selectedProjectIndex < 0))
             {
-                if (GUILayout.Button("Push"))
+                // Push locale selection
+                phraseProvider.m_pushOnlySelected = EditorGUILayout.BeginToggleGroup("Push only selected locale:", phraseProvider.m_pushOnlySelected);
+                string[] availableLocaleNames = LocalizationSettings.AvailableLocales.Locales.Select(l => l.Identifier.Code).ToArray();
+                int selectedLocaleIndex = LocalizationSettings.AvailableLocales.Locales.FindIndex(l => l.Identifier.Code == phraseProvider.m_selectedLocaleId);
+                int selectedLocaleIndexNew = EditorGUILayout.Popup("Locale", selectedLocaleIndex, availableLocaleNames);
+                if (selectedLocaleIndexNew != selectedLocaleIndex)
+                {
+                    selectedLocaleIndex = selectedLocaleIndexNew;
+                    phraseProvider.m_selectedLocaleId = LocalizationSettings.AvailableLocales.Locales[selectedLocaleIndex].Identifier.Code;
+                }
+                EditorGUILayout.EndToggleGroup();
+
+                string pushButtonLabel = phraseProvider.m_pushOnlySelected ? "Push selected" : "Push all";
+                if (GUILayout.Button(pushButtonLabel))
                 {
                     phraseProvider.PushAll();
                 }
