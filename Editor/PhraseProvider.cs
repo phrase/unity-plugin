@@ -92,6 +92,7 @@ namespace Phrase
                         {
                             Debug.Log("Pushing locale " + selectedLocale.code);
                             Push(collection, selectedLocale);
+                            count++;
                         }
                     }
                     else
@@ -112,7 +113,7 @@ namespace Phrase
                 totalLocaleCount += Pull(collection);
                 totalCount++;
             }
-            EditorUtility.DisplayDialog("Pull complete", $"{totalCount} locale(s) in {totalCount} table collection(s) imported.", "OK");
+            EditorUtility.DisplayDialog("Pull complete", $"{totalLocaleCount} locale(s) in {totalCount} table collection(s) imported.", "OK");
         }
 
         public int Push(StringTableCollection collection)
