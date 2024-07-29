@@ -7,6 +7,7 @@ using UnityEditor.Localization;
 using UnityEditor.Localization.Plugins.XLIFF;
 using UnityEngine.Localization.Settings;
 using static Phrase.Client;
+using static Phrase.PhraseOauthAuthenticator;
 
 namespace Phrase
 {
@@ -182,6 +183,8 @@ namespace Phrase
     {
         bool m_showTables = false;
 
+        bool m_oauthButtonEnabled = true;
+
         public override void OnInspectorGUI()
         {
             PhraseProvider phraseProvider = target as PhraseProvider;
@@ -190,6 +193,16 @@ namespace Phrase
             EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiUrl"));
             EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiKey"));
             serializedObject.ApplyModifiedProperties();
+
+            using (new EditorGUI.DisabledScope(!m_oauthButtonEnabled))
+            {
+                string buttonLabel = m_oauthButtonEnabled ? "Log in using OAuth" : "Logging in...";
+                if (GUILayout.Button(buttonLabel))
+                {
+                    m_oauthButtonEnabled = false;
+                    PhraseOauthAuthenticator.Authenticate();
+                }
+            }
 
             if (GUILayout.Button("Fetch Projects"))
             {
