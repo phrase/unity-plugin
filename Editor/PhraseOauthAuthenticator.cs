@@ -44,6 +44,8 @@ namespace Phrase
 
     class PhraseOauthAuthenticator
     {
+        private static PhraseProvider provider;
+
         private static HttpListener listener;
         private static readonly string redirectUrl = "http://localhost:8000/";
         private static string pageData =
@@ -168,8 +170,7 @@ namespace Phrase
                     var appToken = await GetAppToken(accessToken.access_token, user.lastOrganization.uid);
 
                     Debug.Log($"Token: {appToken.accessToken}");
-                    PlayerPrefs.SetString("phrase_app_token", appToken.accessToken);
-                    PlayerPrefs.Save();
+                    provider.m_ApiKey = appToken.accessToken;
                     runServer = false;
                     Debug.Log("Closing server...");
                 }
@@ -205,7 +206,8 @@ namespace Phrase
             listener.Close();
         }
 
-        public static void Authenticate() {
+        public static void Authenticate(PhraseProvider provider) {
+            PhraseOauthAuthenticator.provider = provider;
             StartServer();
             HandleAuthorizationCodeFlow();
         }

@@ -52,12 +52,12 @@ namespace Phrase
             Debug.Log("Creating request to " + url);
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 
-            NetworkCredential myNetworkCredential = new NetworkCredential(accessToken, "");
             Uri uri = new Uri(url);
             request.PreAuthenticate = true;
-            CredentialCache myCredentialCache = new CredentialCache();
-            myCredentialCache.Add(uri, "Basic", myNetworkCredential);
-            request.Credentials = myCredentialCache;
+
+            // authenticate using the access token
+            request.Headers.Add("Authorization", "Bearer " + accessToken);
+
             request.UserAgent = "Unity Plugin/1.0";
             return request;
         }

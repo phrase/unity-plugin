@@ -200,7 +200,7 @@ namespace Phrase
                 if (GUILayout.Button(buttonLabel))
                 {
                     m_oauthButtonEnabled = false;
-                    PhraseOauthAuthenticator.Authenticate();
+                    PhraseOauthAuthenticator.Authenticate(phraseProvider);
                 }
             }
 
