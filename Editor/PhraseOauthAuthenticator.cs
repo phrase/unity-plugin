@@ -12,6 +12,7 @@ using UnityEngine;
 
 namespace Phrase
 {
+    [Serializable]
     struct PhraseAuthTokenResponse
     {
         public string access_token;
@@ -21,10 +22,12 @@ namespace Phrase
         public string refresh_token;
     }
 
+    [Serializable]
     struct PhraseOrganization {
         public string uid;
     }
 
+    [Serializable]
     struct PhraseUserResponse
     {
         public string uid;
@@ -33,28 +36,24 @@ namespace Phrase
         public PhraseOrganization lastOrganization;
     }
 
+    [Serializable]
     struct PhraseAppTokenResponse
     {
-        public string token;
+        public string accessToken;
     }
 
     class PhraseOauthAuthenticator
     {
         private static HttpListener listener;
         private static readonly string redirectUrl = "http://localhost:8000/";
-        private static int pageViews = 0;
-        private static int requestCount = 0;
         private static string pageData =
             "<!DOCTYPE>" +
             "<html>" +
             "  <head>" +
-            "    <title>HttpListener Example</title>" +
+            "    <title>Authorization successful</title>" +
             "  </head>" +
             "  <body>" +
-            "    <p>Page Views: {0}</p>" +
-            "    <form method=\"post\" action=\"shutdown\">" +
-            "      <input type=\"submit\" value=\"Shutdown\" {1}>" +
-            "    </form>" +
+            "    <p>You may close this page now</p>" +
             "  </body>" +
             "</html>";
 
@@ -111,7 +110,6 @@ namespace Phrase
             Debug.Log($"Getting app token from token {token} and organization {organizationId}");
             var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
-            httpClient.DefaultRequestHeaders.Add("Content-Type", "application/json");
 
             var body = new StringContent("{\"applicationUid\":\"strings\"}", Encoding.UTF8, "application/json");
             var response = await httpClient.PostAsync($"{baseUrl}/idm/api/v1/user/organizations/{organizationId}/token/grant", body);
@@ -148,7 +146,7 @@ namespace Phrase
         {
             bool runServer = true;
 
-            // While a user hasn't visited the `shutdown` url, keep on handling requests
+            // While a user hasn't successfully authenticated, keep on handling requests
             while (runServer)
             {
                 Debug.Log("Waiting for a request...");
@@ -169,25 +167,15 @@ namespace Phrase
                     var user = await GetUser(accessToken.access_token);
                     var appToken = await GetAppToken(accessToken.access_token, user.lastOrganization.uid);
 
-                    Debug.Log($"Token: {appToken.token}");
-                    PlayerPrefs.SetString("phrase_app_token", appToken.token);
+                    Debug.Log($"Token: {appToken.accessToken}");
+                    PlayerPrefs.SetString("phrase_app_token", appToken.accessToken);
                     PlayerPrefs.Save();
-                }
-
-                // If `shutdown` url requested w/ POST, then shutdown the server after serving the page
-                if ((req.HttpMethod == "POST") && (req.Url.AbsolutePath == "/shutdown"))
-                {
-                    Debug.Log("Shutdown requested");
                     runServer = false;
+                    Debug.Log("Closing server...");
                 }
-
-                // Make sure we don't increment the page views counter if `favicon.ico` is requested
-                if (req.Url.AbsolutePath != "/favicon.ico")
-                    pageViews += 1;
 
                 // Write the response info
-                string disableSubmit = !runServer ? "disabled" : "";
-                byte[] data = Encoding.UTF8.GetBytes(String.Format(pageData, pageViews, disableSubmit));
+                byte[] data = Encoding.UTF8.GetBytes(pageData);
                 resp.ContentType = "text/html";
                 resp.ContentEncoding = Encoding.UTF8;
                 resp.ContentLength64 = data.LongLength;
