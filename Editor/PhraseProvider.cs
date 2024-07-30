@@ -6,7 +6,7 @@ using UnityEditor;
 using UnityEditor.Localization;
 using UnityEditor.Localization.Plugins.XLIFF;
 using UnityEngine.Localization.Settings;
-using static Phrase.Client;
+using static Phrase.PhraseClient;
 using static Phrase.PhraseOauthAuthenticator;
 
 namespace Phrase
@@ -16,6 +16,15 @@ namespace Phrase
     {
         [SerializeField]
         public string m_ApiUrl = null;
+
+        [SerializeField]
+        public bool m_UseOmniauth = false;
+
+        [System.NonSerialized]
+        public bool m_OauthInProgress = false;
+
+        [System.NonSerialized]
+        public string m_OauthToken = null;
 
         [SerializeField]
         public string m_ApiKey;
@@ -41,10 +50,20 @@ namespace Phrase
         [SerializeField]
         public bool m_pullOnlySelected = false;
 
+        public string Token => m_UseOmniauth ? m_OauthToken : m_ApiKey;
+
+        private PhraseClient Client => new PhraseClient(Token, m_ApiUrl);
+
+        public void SetOauthToken(string token)
+        {
+            m_OauthToken = token;
+            m_OauthInProgress = false;
+            FetchProjects();
+        }
+
         public void FetchProjects()
         {
-            Client client = new Client(m_ApiKey, m_ApiUrl);
-            Projects = client.ListProjects();
+            Projects = Client.ListProjects();
         }
 
         public void FetchLocales()
@@ -53,8 +72,7 @@ namespace Phrase
             {
                 return;
             }
-            Client client = new Client(m_ApiKey, m_ApiUrl);
-            Locales = client.ListLocales(m_selectedProjectId);
+            Locales = Client.ListLocales(m_selectedProjectId);
             LocaleIdsToPull.Clear();
         }
 
@@ -144,8 +162,7 @@ namespace Phrase
             string path = dir + matchingStringTable.name + ".xlf";
             Xliff.Export(matchingStringTable, dir, XliffVersion.V12, new[] { matchingStringTable });
             var xlfContent = File.ReadAllText(path);
-            Client client = new Client(m_ApiKey, m_ApiUrl);
-            client.UploadFile(xlfContent, m_selectedProjectId, locale.id, false);
+            Client.UploadFile(xlfContent, m_selectedProjectId, locale.id, false);
             if (File.Exists(path)) File.Delete(path);
         }
 
@@ -161,8 +178,7 @@ namespace Phrase
                         continue;
                     }
                     Debug.Log("Downloading locale " + selectedLocale.code);
-                    Client client = new Client(m_ApiKey, m_ApiUrl);
-                    string content = client.DownloadLocale(m_selectedProjectId, selectedLocale.id);
+                    string content = Client.DownloadLocale(m_selectedProjectId, selectedLocale.id);
                     using (var stream = new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)))
                     {
                         Xliff.ImportDocumentIntoTable(XliffDocument.Parse(stream), stringTable);
@@ -183,31 +199,40 @@ namespace Phrase
     {
         bool m_showTables = false;
 
-        bool m_oauthButtonEnabled = true;
+        bool m_showConnection = false;
 
         public override void OnInspectorGUI()
         {
             PhraseProvider phraseProvider = target as PhraseProvider;
             serializedObject.Update();
 
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiUrl"));
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiKey"));
-            serializedObject.ApplyModifiedProperties();
+            m_showConnection = EditorGUILayout.BeginFoldoutHeaderGroup(m_showConnection, "Phrase Connection");
 
-            using (new EditorGUI.DisabledScope(!m_oauthButtonEnabled))
-            {
-                string buttonLabel = m_oauthButtonEnabled ? "Log in using OAuth" : "Logging in...";
-                if (GUILayout.Button(buttonLabel))
+            if (m_showConnection) {
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiUrl"));
+                phraseProvider.m_UseOmniauth = !EditorGUILayout.BeginToggleGroup("Token authentication", !phraseProvider.m_UseOmniauth);
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiKey"));
+                if (GUILayout.Button("Fetch Projects"))
                 {
-                    m_oauthButtonEnabled = false;
-                    PhraseOauthAuthenticator.Authenticate(phraseProvider);
+                    phraseProvider.FetchProjects();
                 }
-            }
+                EditorGUILayout.EndToggleGroup();
+                serializedObject.ApplyModifiedProperties();
+                phraseProvider.m_UseOmniauth = EditorGUILayout.BeginToggleGroup("OAuth authentication", phraseProvider.m_UseOmniauth);
 
-            if (GUILayout.Button("Fetch Projects"))
-            {
-                phraseProvider.FetchProjects();
+                using (new EditorGUI.DisabledScope(phraseProvider.m_OauthInProgress))
+                {
+                    string buttonLabel = phraseProvider.m_OauthInProgress ? "Logging in..." : "Log in using OAuth";
+                    if (GUILayout.Button(buttonLabel))
+                    {
+                        phraseProvider.m_OauthInProgress = true;
+                        PhraseOauthAuthenticator.Authenticate(phraseProvider);
+                    }
+                }
+                EditorGUILayout.EndToggleGroup();
             }
+            EditorGUILayout.EndFoldoutHeaderGroup();
+
             string[] projectNames = phraseProvider.Projects.Select(p => p.name).ToArray();
             int selectedProjectIndex = phraseProvider.Projects.FindIndex(p => p.id == phraseProvider.m_selectedProjectId);
 
@@ -234,6 +259,7 @@ namespace Phrase
                     }
                 }
             }
+            EditorGUILayout.EndFoldoutHeaderGroup();
 
             using (new EditorGUI.DisabledScope(selectedProjectIndex < 0))
             {

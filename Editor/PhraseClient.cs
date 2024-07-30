@@ -10,7 +10,7 @@ using Newtonsoft.Json;
 
 namespace Phrase
 {
-    public class Client
+    public class PhraseClient
     {
         private readonly string accessToken;
 
@@ -37,12 +37,12 @@ namespace Phrase
             public string id;
         }
 
-        public Client(string accessToken)
+        public PhraseClient(string accessToken)
         {
             this.accessToken = accessToken;
         }
 
-        public Client(string accessToken, string apiUrl)
+        public PhraseClient(string accessToken, string apiUrl)
         {
             this.accessToken = accessToken;
             this.apiUrl = apiUrl;

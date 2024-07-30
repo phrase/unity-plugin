@@ -47,17 +47,18 @@ namespace Phrase
         private static PhraseProvider provider;
 
         private static HttpListener listener;
-        private static readonly string redirectUrl = "http://localhost:8000/";
-        private static string pageData =
-            "<!DOCTYPE>" +
-            "<html>" +
-            "  <head>" +
-            "    <title>Authorization successful</title>" +
-            "  </head>" +
-            "  <body>" +
-            "    <p>You may close this page now</p>" +
-            "  </body>" +
-            "</html>";
+
+        private static readonly string listenUrl = "http://localhost:8000/oauth/";
+        private static readonly string redirectUrl = $"{listenUrl}/callback";
+        private static string pageSuccess =
+@"<html>
+  <head>
+    <title>Authorization successful</title>
+  </head>
+  <body>
+    <p>You may close this page now</p>
+  </body>
+</html>";
 
         private static readonly string clientId = "strings-unity";
         // private static readonly string baseUrl = "https://eu.phrase.com";
@@ -154,10 +155,7 @@ namespace Phrase
                 Debug.Log("Waiting for a request...");
                 // Will wait here until we hear from a connection
                 HttpListenerContext ctx = await listener.GetContextAsync();
-
-                // Peel out the requests and response objects
                 HttpListenerRequest req = ctx.Request;
-                HttpListenerResponse resp = ctx.Response;
 
                 // Print out some info about the request
                 Debug.Log($"Request: {req.HttpMethod} {req.Url.ToString()}");
@@ -170,30 +168,43 @@ namespace Phrase
                     var appToken = await GetAppToken(accessToken.access_token, user.lastOrganization.uid);
 
                     Debug.Log($"Token: {appToken.accessToken}");
-                    provider.m_ApiKey = appToken.accessToken;
+                    provider.SetOauthToken(appToken.accessToken);
+                    SendPageContent(ctx.Response, pageSuccess);
                     runServer = false;
                     Debug.Log("Closing server...");
+                    StopServer();
+                } else {
+                    SendPageContent(ctx.Response, "Error: No code found in the request");
                 }
 
-                // Write the response info
-                byte[] data = Encoding.UTF8.GetBytes(pageData);
-                resp.ContentType = "text/html";
-                resp.ContentEncoding = Encoding.UTF8;
-                resp.ContentLength64 = data.LongLength;
+                // // Write the response info
+                // byte[] data = Encoding.UTF8.GetBytes(pageData);
+                // resp.ContentType = "text/html";
+                // resp.ContentEncoding = Encoding.UTF8;
+                // resp.ContentLength64 = data.LongLength;
 
-                // Write out to the response stream (asynchronously), then close it
-                await resp.OutputStream.WriteAsync(data, 0, data.Length);
-                resp.Close();
+                // // Write out to the response stream (asynchronously), then close it
+                // await resp.OutputStream.WriteAsync(data, 0, data.Length);
+                // resp.Close();
             }
+        }
+
+        private static void SendPageContent(HttpListenerResponse response, string content)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes(content);
+            response.ContentLength64 = buffer.Length;
+            Stream output = response.OutputStream;
+            output.Write(buffer, 0, buffer.Length);
+            output.Close();
         }
 
         private static void StartServer()
         {
             // Create a Http server and start listening for incoming connections
             listener = new HttpListener();
-            listener.Prefixes.Add(redirectUrl);
+            listener.Prefixes.Add(listenUrl);
             listener.Start();
-            Debug.Log($"Listening for connections on {redirectUrl}");
+            Debug.Log($"Listening for connections on {listenUrl}");
 
             // Handle requests
             Task listenTask = HandleIncomingConnections();
@@ -202,7 +213,6 @@ namespace Phrase
 
         private static void StopServer()
         {
-            // Close the listener
             listener.Close();
         }
 
