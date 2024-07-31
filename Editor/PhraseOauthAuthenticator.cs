@@ -61,9 +61,21 @@ namespace Phrase
 </html>";
 
         private static readonly string clientId = "strings-unity";
-        // private static readonly string baseUrl = "https://eu.phrase.com";
 
-        private static readonly string baseUrl = "https://eu.phrase-qa.com";
+        private static string BaseUrl
+        {
+            get {
+                switch (provider.m_Environment)
+                {
+                    case "EU":
+                        return "https://eu.phrase.com";
+                    case "US":
+                        return "https://us.phrase.com";
+                    default:
+                        return "https://eu.phrase-qa.com";
+                };
+            }
+        }
 
         private static string codeVerifier = "";
 
@@ -74,7 +86,7 @@ namespace Phrase
             codeVerifier = GenerateRandomString(64);
             var codeChallenge = GenerateCodeChallenge(codeVerifier);
 
-            Application.OpenURL($"{baseUrl}/idm/openid/authorize?response_type=code&scope=openid%20sso&client_id={clientId}&code_challenge_method={challengeMethod}&code_challenge={codeChallenge}&redirect_uri={redirectUrl}&login_hint=__idm__");
+            Application.OpenURL($"{BaseUrl}/idm/openid/authorize?response_type=code&scope=openid%20sso&client_id={clientId}&code_challenge_method={challengeMethod}&code_challenge={codeChallenge}&redirect_uri={redirectUrl}&login_hint=__idm__");
         }
 
         private static async Task<PhraseAuthTokenResponse> GetAccessToken(string code)
@@ -90,7 +102,7 @@ namespace Phrase
                 new KeyValuePair<string, string>("code", code)
             });
 
-            var response = await httpClient.PostAsync($"{baseUrl}/idm/oauth/token", content);
+            var response = await httpClient.PostAsync($"{BaseUrl}/idm/oauth/token", content);
             var jsonResponse =  await response.Content.ReadAsStringAsync();
             Debug.Log($"Response: {jsonResponse}");
             return JsonUtility.FromJson<PhraseAuthTokenResponse>(jsonResponse);
@@ -102,7 +114,7 @@ namespace Phrase
             var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
 
-            var response = await httpClient.GetAsync($"{baseUrl}/idm/api/v1/user");
+            var response = await httpClient.GetAsync($"{BaseUrl}/idm/api/v1/user");
             var jsonResponse = await response.Content.ReadAsStringAsync();
             Debug.Log($"Response: {jsonResponse}");
             return JsonUtility.FromJson<PhraseUserResponse>(jsonResponse);
@@ -115,7 +127,7 @@ namespace Phrase
             httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
 
             var body = new StringContent("{\"applicationUid\":\"strings\"}", Encoding.UTF8, "application/json");
-            var response = await httpClient.PostAsync($"{baseUrl}/idm/api/v1/user/organizations/{organizationId}/token/grant", body);
+            var response = await httpClient.PostAsync($"{BaseUrl}/idm/api/v1/user/organizations/{organizationId}/token/grant", body);
             var jsonResponse = await response.Content.ReadAsStringAsync();
             Debug.Log($"Response: {jsonResponse}");
             return JsonUtility.FromJson<PhraseAppTokenResponse>(jsonResponse);

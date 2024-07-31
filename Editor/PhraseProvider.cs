@@ -15,6 +15,9 @@ namespace Phrase
     public partial class PhraseProvider : ScriptableObject
     {
         [SerializeField]
+        public string m_Environment = "EU";
+
+        [SerializeField]
         public string m_ApiUrl = null;
 
         [SerializeField]
@@ -201,6 +204,8 @@ namespace Phrase
 
         bool m_showConnection = false;
 
+        static readonly string[] m_environmentOptions = { "EU", "US", "custom" };
+
         public override void OnInspectorGUI()
         {
             PhraseProvider phraseProvider = target as PhraseProvider;
@@ -209,7 +214,20 @@ namespace Phrase
             m_showConnection = EditorGUILayout.BeginFoldoutHeaderGroup(m_showConnection, "Phrase Connection");
 
             if (m_showConnection) {
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiUrl"));
+                phraseProvider.m_Environment = m_environmentOptions[EditorGUILayout.Popup("Environment", System.Array.IndexOf(m_environmentOptions, phraseProvider.m_Environment), m_environmentOptions)];
+                if (phraseProvider.m_Environment == "custom") {
+                    phraseProvider.m_ApiUrl = EditorGUILayout.TextField("API URL", phraseProvider.m_ApiUrl);
+                } else {
+                    switch (phraseProvider.m_Environment) {
+                        case "EU":
+                            phraseProvider.m_ApiUrl = "https://api.phrase.com/v2/";
+                            break;
+                        case "US":
+                            phraseProvider.m_ApiUrl = "https://api.us.phrase.com/v2/";
+                            break;
+                    }
+                }
+                // EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiUrl"));
                 phraseProvider.m_UseOmniauth = !EditorGUILayout.BeginToggleGroup("Token authentication", !phraseProvider.m_UseOmniauth);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiKey"));
                 if (GUILayout.Button("Fetch Projects"))
