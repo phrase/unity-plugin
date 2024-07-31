@@ -21,7 +21,7 @@ namespace Phrase
         public string m_ApiUrl = null;
 
         [SerializeField]
-        public bool m_UseOmniauth = false;
+        public bool m_UseOauth = false;
 
         [System.NonSerialized]
         public bool m_OauthInProgress = false;
@@ -53,9 +53,17 @@ namespace Phrase
         [SerializeField]
         public bool m_pullOnlySelected = false;
 
-        public string Token => m_UseOmniauth ? m_OauthToken : m_ApiKey;
+        public string Token => m_UseOauth ? m_OauthToken : m_ApiKey;
 
         private PhraseClient Client => new PhraseClient(Token, m_ApiUrl);
+
+        public void Log(string message)
+        {
+            if (m_Environment == "Custom")
+            {
+                Debug.Log($"[Phrase] {message}");
+            }
+        }
 
         public void SetOauthToken(string token)
         {
@@ -105,14 +113,13 @@ namespace Phrase
                 var phraseExtension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
                 if (phraseExtension != null)
                 {
-                    // Debug.Log(phraseExtension.m_keyPrefix);
                     if (m_pushOnlySelected && m_selectedLocaleId != null)
                     {
-                        Debug.Log("Looking for locale " + m_selectedLocaleId);
+                        Log("Looking for locale " + m_selectedLocaleId);
                         var selectedLocale = Locales.FirstOrDefault(l => l.code == m_selectedLocaleId);
                         if (selectedLocale != null)
                         {
-                            Debug.Log("Pushing locale " + selectedLocale.code);
+                            Log("Pushing locale " + selectedLocale.code);
                             Push(collection, selectedLocale);
                             count++;
                         }
@@ -180,7 +187,7 @@ namespace Phrase
                     {
                         continue;
                     }
-                    Debug.Log("Downloading locale " + selectedLocale.code);
+                    Log("Downloading locale " + selectedLocale.code);
                     string content = Client.DownloadLocale(m_selectedProjectId, selectedLocale.id);
                     using (var stream = new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)))
                     {
@@ -190,7 +197,7 @@ namespace Phrase
                 }
                 else
                 {
-                    Debug.Log("No Phrase locale found for string table " + stringTable.LocaleIdentifier.Code);
+                    Log("No Phrase locale found for string table " + stringTable.LocaleIdentifier.Code);
                 }
             }
             return count;
@@ -204,7 +211,7 @@ namespace Phrase
 
         bool m_showConnection = false;
 
-        static readonly string[] m_environmentOptions = { "EU", "US", "custom" };
+        static readonly string[] m_environmentOptions = { "EU", "US", "Custom" };
 
         public override void OnInspectorGUI()
         {
@@ -215,7 +222,7 @@ namespace Phrase
 
             if (m_showConnection) {
                 phraseProvider.m_Environment = m_environmentOptions[EditorGUILayout.Popup("Environment", System.Array.IndexOf(m_environmentOptions, phraseProvider.m_Environment), m_environmentOptions)];
-                if (phraseProvider.m_Environment == "custom") {
+                if (phraseProvider.m_Environment == "Custom") {
                     phraseProvider.m_ApiUrl = EditorGUILayout.TextField("API URL", phraseProvider.m_ApiUrl);
                 } else {
                     switch (phraseProvider.m_Environment) {
@@ -228,7 +235,7 @@ namespace Phrase
                     }
                 }
                 // EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiUrl"));
-                phraseProvider.m_UseOmniauth = !EditorGUILayout.BeginToggleGroup("Token authentication", !phraseProvider.m_UseOmniauth);
+                phraseProvider.m_UseOauth = !EditorGUILayout.BeginToggleGroup("Token authentication", !phraseProvider.m_UseOauth);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiKey"));
                 if (GUILayout.Button("Fetch Projects"))
                 {
@@ -236,7 +243,7 @@ namespace Phrase
                 }
                 EditorGUILayout.EndToggleGroup();
                 serializedObject.ApplyModifiedProperties();
-                phraseProvider.m_UseOmniauth = EditorGUILayout.BeginToggleGroup("OAuth authentication", phraseProvider.m_UseOmniauth);
+                phraseProvider.m_UseOauth = EditorGUILayout.BeginToggleGroup("OAuth authentication", phraseProvider.m_UseOauth);
 
                 using (new EditorGUI.DisabledScope(phraseProvider.m_OauthInProgress))
                 {

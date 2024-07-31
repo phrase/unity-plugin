@@ -91,7 +91,7 @@ namespace Phrase
 
         private static async Task<PhraseAuthTokenResponse> GetAccessToken(string code)
         {
-            Debug.Log($"Getting access token from code {code}");
+            provider.Log($"Getting access token from code {code}");
             var httpClient = new HttpClient();
             var content = new FormUrlEncodedContent(new[]
             {
@@ -104,32 +104,32 @@ namespace Phrase
 
             var response = await httpClient.PostAsync($"{BaseUrl}/idm/oauth/token", content);
             var jsonResponse =  await response.Content.ReadAsStringAsync();
-            Debug.Log($"Response: {jsonResponse}");
+            provider.Log($"Response: {jsonResponse}");
             return JsonUtility.FromJson<PhraseAuthTokenResponse>(jsonResponse);
         }
 
         private static async Task<PhraseUserResponse> GetUser(string token)
         {
-            Debug.Log($"Getting user from token {token}");
+            provider.Log($"Getting user from token {token}");
             var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
 
             var response = await httpClient.GetAsync($"{BaseUrl}/idm/api/v1/user");
             var jsonResponse = await response.Content.ReadAsStringAsync();
-            Debug.Log($"Response: {jsonResponse}");
+            provider.Log($"Response: {jsonResponse}");
             return JsonUtility.FromJson<PhraseUserResponse>(jsonResponse);
         }
 
         private static async Task<PhraseAppTokenResponse> GetAppToken(string token, string organizationId)
         {
-            Debug.Log($"Getting app token from token {token} and organization {organizationId}");
+            provider.Log($"Getting app token from token {token} and organization {organizationId}");
             var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
 
             var body = new StringContent("{\"applicationUid\":\"strings\"}", Encoding.UTF8, "application/json");
             var response = await httpClient.PostAsync($"{BaseUrl}/idm/api/v1/user/organizations/{organizationId}/token/grant", body);
             var jsonResponse = await response.Content.ReadAsStringAsync();
-            Debug.Log($"Response: {jsonResponse}");
+            provider.Log($"Response: {jsonResponse}");
             return JsonUtility.FromJson<PhraseAppTokenResponse>(jsonResponse);
         }
 
@@ -164,13 +164,13 @@ namespace Phrase
             // While a user hasn't successfully authenticated, keep on handling requests
             while (runServer)
             {
-                Debug.Log("Waiting for a request...");
+                provider.Log("Waiting for a request...");
                 // Will wait here until we hear from a connection
                 HttpListenerContext ctx = await listener.GetContextAsync();
                 HttpListenerRequest req = ctx.Request;
 
                 // Print out some info about the request
-                Debug.Log($"Request: {req.HttpMethod} {req.Url.ToString()}");
+                provider.Log($"Request: {req.HttpMethod} {req.Url.ToString()}");
 
                 string code = Regex.Match(req.Url.Query, "code=([^&]*)").Groups[1].Value;
                 if (code != "")
@@ -179,25 +179,15 @@ namespace Phrase
                     var user = await GetUser(accessToken.access_token);
                     var appToken = await GetAppToken(accessToken.access_token, user.lastOrganization.uid);
 
-                    Debug.Log($"Token: {appToken.accessToken}");
+                    provider.Log($"Token: {appToken.accessToken}");
                     provider.SetOauthToken(appToken.accessToken);
                     SendPageContent(ctx.Response, pageSuccess);
                     runServer = false;
-                    Debug.Log("Closing server...");
+                    provider.Log("Closing server...");
                     StopServer();
                 } else {
                     SendPageContent(ctx.Response, "Error: No code found in the request");
                 }
-
-                // // Write the response info
-                // byte[] data = Encoding.UTF8.GetBytes(pageData);
-                // resp.ContentType = "text/html";
-                // resp.ContentEncoding = Encoding.UTF8;
-                // resp.ContentLength64 = data.LongLength;
-
-                // // Write out to the response stream (asynchronously), then close it
-                // await resp.OutputStream.WriteAsync(data, 0, data.Length);
-                // resp.Close();
             }
         }
 
@@ -216,11 +206,10 @@ namespace Phrase
             listener = new HttpListener();
             listener.Prefixes.Add(listenUrl);
             listener.Start();
-            Debug.Log($"Listening for connections on {listenUrl}");
+            provider.Log($"Listening for connections on {listenUrl}");
 
             // Handle requests
             Task listenTask = HandleIncomingConnections();
-            // listenTask.GetAwaiter().GetResult();
         }
 
         private static void StopServer()
