@@ -27,7 +27,7 @@ namespace Phrase
         [System.NonSerialized]
         public bool m_OauthInProgress = false;
 
-        [System.NonSerialized]
+        [SerializeField]
         public string m_OauthToken = null;
 
         [SerializeField]
