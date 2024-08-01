@@ -196,6 +196,11 @@ namespace Phrase
 
         public static async Task<bool> RefreshToken()
         {
+            if (accessToken == null || organizationId == null)
+            {
+                provider.Log("No access token or organization id found");
+                return false;
+            }
             var appTokenResponse = await GetAppToken(accessToken, organizationId);
             provider.Log($"Token: {appTokenResponse.accessToken}");
             provider.SetOauthToken(appTokenResponse.accessToken);
@@ -211,7 +216,7 @@ namespace Phrase
             output.Close();
         }
 
-        private static void StartServer()
+        private static async void StartServer()
         {
             // Create a Http server and start listening for incoming connections
             listener = new HttpListener();
@@ -220,7 +225,7 @@ namespace Phrase
             provider.Log($"Listening for connections on {listenUrl}");
 
             // Handle requests
-            Task listenTask = HandleIncomingConnections();
+            await HandleIncomingConnections();
         }
 
         private static void StopServer()
