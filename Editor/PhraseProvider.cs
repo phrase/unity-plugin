@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Localization;
@@ -55,13 +56,21 @@ namespace Phrase
 
         public string Token => m_UseOauth ? m_OauthToken : m_ApiKey;
 
-        private PhraseClient Client => new PhraseClient(Token, m_ApiUrl);
+        private PhraseClient Client => new PhraseClient(this);
 
         public void Log(string message)
         {
             if (m_Environment == "Custom")
             {
                 Debug.Log($"[Phrase] {message}");
+            }
+        }
+
+        public void LogError(string message)
+        {
+            if (m_Environment == "Custom")
+            {
+                Debug.LogError($"[Phrase] {message}");
             }
         }
 
@@ -72,18 +81,27 @@ namespace Phrase
             FetchProjects();
         }
 
-        public void FetchProjects()
+        public async Task<bool> RefreshToken()
         {
-            Projects = Client.ListProjects();
+            if (m_UseOauth)
+            {
+                return await PhraseOauthAuthenticator.RefreshToken();
+            }
+            return false;
         }
 
-        public void FetchLocales()
+        public async void FetchProjects()
+        {
+            Projects = await Client.ListProjects();
+        }
+
+        public async void FetchLocales()
         {
             if (m_selectedProjectId == null)
             {
                 return;
             }
-            Locales = Client.ListLocales(m_selectedProjectId);
+            Locales = await Client.ListLocales(m_selectedProjectId);
             LocaleIdsToPull.Clear();
         }
 
@@ -133,13 +151,13 @@ namespace Phrase
             EditorUtility.DisplayDialog("Push complete", $"{count} locale(s) from {collections.Count} table collection(s) pushed.", "OK");
         }
 
-        public void PullAll()
+        public async void PullAll()
         {
             int totalLocaleCount = 0;
             int totalCount = 0;
             foreach (StringTableCollection collection in ConnectedStringTableCollections())
             {
-                totalLocaleCount += Pull(collection);
+                totalLocaleCount += await Pull(collection);
                 totalCount++;
             }
             EditorUtility.DisplayDialog("Pull complete", $"{totalLocaleCount} locale(s) in {totalCount} table collection(s) imported.", "OK");
@@ -176,7 +194,7 @@ namespace Phrase
             if (File.Exists(path)) File.Delete(path);
         }
 
-        public int Pull(StringTableCollection collection)
+        public async Task<int> Pull(StringTableCollection collection)
         {
             int count = 0;
             foreach(var stringTable in collection.StringTables) {
@@ -188,7 +206,7 @@ namespace Phrase
                         continue;
                     }
                     Log("Downloading locale " + selectedLocale.code);
-                    string content = Client.DownloadLocale(m_selectedProjectId, selectedLocale.id);
+                    string content = await Client.DownloadLocale(m_selectedProjectId, selectedLocale.id);
                     using (var stream = new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)))
                     {
                         Xliff.ImportDocumentIntoTable(XliffDocument.Parse(stream), stringTable);
@@ -227,14 +245,14 @@ namespace Phrase
                 } else {
                     switch (phraseProvider.m_Environment) {
                         case "EU":
-                            phraseProvider.m_ApiUrl = "https://api.phrase.com/v2/";
+                            phraseProvider.m_ApiUrl = "https://api.phrase.com/v2";
                             break;
                         case "US":
-                            phraseProvider.m_ApiUrl = "https://api.us.phrase.com/v2/";
+                            phraseProvider.m_ApiUrl = "https://api.us.phrase.com/v2";
                             break;
                     }
                 }
-                // EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiUrl"));
+
                 phraseProvider.m_UseOauth = !EditorGUILayout.BeginToggleGroup("Token authentication", !phraseProvider.m_UseOauth);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiKey"));
                 if (GUILayout.Button("Fetch Projects"))

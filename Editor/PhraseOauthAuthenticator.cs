@@ -81,6 +81,10 @@ namespace Phrase
 
         private static readonly string challengeMethod = "S256";
 
+        private static string accessToken = null;
+
+        private static string organizationId = null;
+
         private static void HandleAuthorizationCodeFlow()
         {
             codeVerifier = GenerateRandomString(64);
@@ -175,12 +179,11 @@ namespace Phrase
                 string code = Regex.Match(req.Url.Query, "code=([^&]*)").Groups[1].Value;
                 if (code != "")
                 {
-                    var accessToken = await GetAccessToken(code);
-                    var user = await GetUser(accessToken.access_token);
-                    var appToken = await GetAppToken(accessToken.access_token, user.lastOrganization.uid);
-
-                    provider.Log($"Token: {appToken.accessToken}");
-                    provider.SetOauthToken(appToken.accessToken);
+                    var accessTokenResponse = await GetAccessToken(code);
+                    accessToken = accessTokenResponse.access_token;
+                    var userResponse = await GetUser(accessToken);
+                    organizationId = userResponse.lastOrganization.uid;
+                    await RefreshToken();
                     SendPageContent(ctx.Response, pageSuccess);
                     runServer = false;
                     provider.Log("Closing server...");
@@ -189,6 +192,14 @@ namespace Phrase
                     SendPageContent(ctx.Response, "Error: No code found in the request");
                 }
             }
+        }
+
+        public static async Task<bool> RefreshToken()
+        {
+            var appTokenResponse = await GetAppToken(accessToken, organizationId);
+            provider.Log($"Token: {appTokenResponse.accessToken}");
+            provider.SetOauthToken(appTokenResponse.accessToken);
+            return true;
         }
 
         private static void SendPageContent(HttpListenerResponse response, string content)
