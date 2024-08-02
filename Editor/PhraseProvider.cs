@@ -245,10 +245,10 @@ namespace Phrase
                 } else {
                     switch (phraseProvider.m_Environment) {
                         case "EU":
-                            phraseProvider.m_ApiUrl = "https://api.phrase.com/v2";
+                            phraseProvider.m_ApiUrl = "https://api.phrase.com/v2/";
                             break;
                         case "US":
-                            phraseProvider.m_ApiUrl = "https://api.us.phrase.com/v2";
+                            phraseProvider.m_ApiUrl = "https://api.us.app.phrase.com/v2/";
                             break;
                     }
                 }
