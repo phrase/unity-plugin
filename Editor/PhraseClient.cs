@@ -4,17 +4,70 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using Newtonsoft.Json;
 
 namespace Phrase
 {
-    public class Client
+    public class RetryHandler : DelegatingHandler
     {
-        private readonly string accessToken;
+        private const int MaxRetries = 1;
 
-        private readonly string apiUrl = "https://api.phrase.com/v2";
+        private readonly PhraseProvider Provider;
+
+        public RetryHandler(HttpMessageHandler innerHandler, PhraseProvider provider) : base(innerHandler)
+        {
+            Provider = provider;
+        }
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            HttpResponseMessage response = null;
+            request.Headers.Add("Authorization", "Bearer " + Provider.Token);
+            for (int i = 0; i < MaxRetries; i++)
+            {
+                Provider.Log("Sending request to " + request.RequestUri);
+                response = await base.SendAsync(request, cancellationToken);
+                if (response.IsSuccessStatusCode) {
+                    return response;
+                }
+                else if (response.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    Provider.Log("Unauthorized, refreshing token");
+                    if (await Provider.RefreshToken()) {
+                        request.Headers.Remove("Authorization");
+                        request.Headers.Add("Authorization", "Bearer " + Provider.Token);
+                    } else {
+                        Provider.Log("Request unauthorized, failed to refresh token");
+                        return response;
+                    }
+                }
+                else
+                {
+                    Provider.Log("Request failed with status code " + response.StatusCode);
+                    return response;
+                }
+            }
+
+            return response;
+        }
+    }
+
+    public class PhraseClient
+    {
+        private readonly PhraseProvider Provider;
+
+        private string ApiUrl => Provider.m_ApiUrl;
+
+        private string AccessToken => Provider.Token;
+
+        private HttpClient Client;
 
         [Serializable]
         public class Locale
@@ -37,65 +90,58 @@ namespace Phrase
             public string id;
         }
 
-        public Client(string accessToken)
+        public PhraseClient(PhraseProvider provider)
         {
-            this.accessToken = accessToken;
+            this.Provider = provider;
+            this.Client = new HttpClient(new RetryHandler(new HttpClientHandler(), provider));
+            // Client.DefaultRequestHeaders.Add("Authorization", "Bearer " + AccessToken);
+            Client.DefaultRequestHeaders.Add("User-Agent", "Unity Plugin/1.0");
+            Client.BaseAddress = new Uri(ApiUrl);
         }
 
-        public Client(string accessToken, string apiUrl)
-        {
-            this.accessToken = accessToken;
-            this.apiUrl = apiUrl;
-        }
-
-        private HttpWebRequest createRequest(string url) {
-            Debug.Log("Creating request to " + url);
+        private HttpWebRequest CreateRequest(string url) {
+            Provider.Log("Creating request to " + url);
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 
-            NetworkCredential myNetworkCredential = new NetworkCredential(accessToken, "");
             Uri uri = new Uri(url);
             request.PreAuthenticate = true;
-            CredentialCache myCredentialCache = new CredentialCache();
-            myCredentialCache.Add(uri, "Basic", myNetworkCredential);
-            request.Credentials = myCredentialCache;
+
+            // authenticate using the access token
+            request.Headers.Add("Authorization", "Bearer " + AccessToken);
+
             request.UserAgent = "Unity Plugin/1.0";
             return request;
         }
 
-        public string DownloadLocale(string projectID, string localeID)
+        public async Task<string> DownloadLocale(string projectID, string localeID)
         {
-            string url = string.Format("{0}/projects/{1}/locales/{2}/download?file_format=xlf&include_empty_translations=true", apiUrl, projectID, localeID);
-            HttpWebRequest request = createRequest(url);
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            StreamReader reader = new StreamReader(response.GetResponseStream());
-            string content = reader.ReadToEnd();
-            return content;
+            string url = string.Format("projects/{0}/locales/{1}/download?file_format=xlf&include_empty_translations=true", projectID, localeID);
+            using HttpResponseMessage response = await Client.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync();
         }
 
 
-        public List<Locale> ListLocales(string projectID)
+        public async Task<List<Locale>> ListLocales(string projectID)
         {
-            string url = string.Format("{0}/projects/{1}/locales", apiUrl, projectID);
-            HttpWebRequest request = createRequest(url);
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            StreamReader reader = new StreamReader(response.GetResponseStream());
-            string jsonResponse = reader.ReadToEnd();
+            string url = string.Format("projects/{0}/locales", projectID);
+            using HttpResponseMessage response = await Client.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            string jsonResponse = await response.Content.ReadAsStringAsync();
             return JsonConvert.DeserializeObject<List<Locale>>(jsonResponse);
         }
 
-        public List<Project> ListProjects()
+        public async Task<List<Project>> ListProjects()
         {
-            string url = string.Format("{0}/projects?per_page=100", apiUrl);
-            HttpWebRequest request = createRequest(url);
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            StreamReader reader = new StreamReader(response.GetResponseStream());
-            string jsonResponse = reader.ReadToEnd();
+            using HttpResponseMessage response = await Client.GetAsync("projects?per_page=100");
+            response.EnsureSuccessStatusCode();
+            string jsonResponse = await response.Content.ReadAsStringAsync();
             return JsonConvert.DeserializeObject<List<Project>>(jsonResponse);
         }
 
         public void UploadFile(string translations, string projectID, string localeID, bool autoTranslate)
         {
-            string url = string.Format("{0}/projects/{1}/uploads", apiUrl, projectID);
+            string url = string.Format("{0}/projects/{1}/uploads", ApiUrl, projectID);
             NameValueCollection nvc = new NameValueCollection();
             nvc.Add("locale_id", localeID);
             nvc.Add("file_format", "xlf");
@@ -109,7 +155,7 @@ namespace Phrase
 
         public Screenshot UploadScreenshot(byte[] image, string projectID, string localeID)
         {
-            string url = string.Format("{0}/projects/{1}/screenshots", apiUrl, projectID);
+            string url = string.Format("{0}/projects/{1}/screenshots", ApiUrl, projectID);
             NameValueCollection nvc = new NameValueCollection();
             var response = HttpUploadFile(url, "unity.jpg", "filename", "image/jpeg", nvc, image);
             var screenshot = JsonUtility.FromJson<Screenshot>(response);
@@ -121,7 +167,7 @@ namespace Phrase
             string boundary = "---------------------------" + DateTime.Now.Ticks.ToString("x");
             byte[] boundarybytes = Encoding.ASCII.GetBytes("\r\n--" + boundary + "\r\n");
 
-            HttpWebRequest wr = createRequest(url);
+            HttpWebRequest wr = CreateRequest(url);
             wr.ContentType = "multipart/form-data; boundary=" + boundary;
             wr.Method = "POST";
             wr.KeepAlive = true;
@@ -155,7 +201,7 @@ namespace Phrase
                 Stream stream2 = wresp.GetResponseStream();
                 StreamReader reader2 = new StreamReader(stream2);
                 var response = reader2.ReadToEnd();
-                Debug.Log(string.Format("File uploaded, server response is: {0}", response));
+                Provider.Log(string.Format("File uploaded, server response is: {0}", response));
                 return response;
             }
             catch (WebException ex)
@@ -164,18 +210,18 @@ namespace Phrase
                     if (stream != null)
                         using (var reader = new StreamReader(stream))
                         {
-                            Debug.Log(reader.ReadToEnd());
+                            Provider.Log(reader.ReadToEnd());
                         }
 
-                Debug.LogError("Error uploading file" + ex.ToString());
+                Provider.LogError("Error uploading file" + ex.ToString());
                 if (wresp != null)
                 {
-                    Debug.Log("not null");
+                    Provider.Log("not null");
                     using (var reader = new StreamReader(wresp.GetResponseStream()))
                     {
                         string result = reader.ReadToEnd(); // do something fun...
-                        Debug.Log("test");
-                        Debug.Log(result);
+                        Provider.Log("test");
+                        Provider.Log(result);
                     }
                     wresp.Close();
                     wresp = null;

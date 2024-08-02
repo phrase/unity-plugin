@@ -20,7 +20,7 @@ namespace Phrase
 
         private Texture icon;
 
-        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        public override async void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             EditorGUI.BeginProperty(position, label, property);
             position.yMin += EditorGUIUtility.standardVerticalSpacing;
@@ -59,7 +59,7 @@ namespace Phrase
                     {
                         var extension = property.GetActualObjectForSerializedProperty<PhraseExtension>(fieldInfo);
                         var collection = extension.TargetCollection as StringTableCollection;
-                        provider.Pull(collection);
+                        await provider.Pull(collection);
                     }
                     position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
                 }
