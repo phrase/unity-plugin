@@ -75,6 +75,11 @@ namespace Phrase
             public string id;
             public string name;
             public string code;
+
+            public string ToString()
+            {
+                return name == code ? name : $"{name} ({code})";
+            }
         }
 
         [Serializable]

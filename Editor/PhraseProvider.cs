@@ -90,6 +90,10 @@ namespace Phrase
             return false;
         }
 
+        public bool IsProjectSelected => Projects.Count > 0 && m_selectedProjectId != null;
+
+        public bool HasLocaleMismatch => MissingLocalesLocally().Count > 0 || MissingLocalesRemotely().Count > 0;
+
         public async void FetchProjects()
         {
             Projects = await Client.ListProjects();
@@ -320,7 +324,7 @@ namespace Phrase
                 phraseProvider.FetchLocales();
             }
 
-            if (phraseProvider.MissingLocalesLocally().Count > 0 || phraseProvider.MissingLocalesRemotely().Count > 0)
+            if (phraseProvider.IsProjectSelected && phraseProvider.HasLocaleMismatch)
             {
                 m_showLocalesMissing = EditorGUILayout.BeginFoldoutHeaderGroup(m_showLocalesMissing, "Missing locales");
                 if (m_showLocalesMissing)
@@ -330,9 +334,9 @@ namespace Phrase
                         EditorGUILayout.HelpBox("The following Phrase locales are missing in the project", MessageType.Warning);
                         foreach (var locale in phraseProvider.MissingLocalesLocally())
                         {
-                            EditorGUILayout.LabelField(locale.code);
+                            EditorGUILayout.LabelField(locale.ToString());
                         }
-                        if (GUILayout.Button("Create missing"))
+                        if (GUILayout.Button("Create locales locally"))
                         {
                             string pathToSave = EditorUtility.OpenFolderPanel("Save new locales", "Assets", "");
                             if (string.IsNullOrEmpty(pathToSave))
@@ -344,11 +348,14 @@ namespace Phrase
                                 return;
                             }
                             pathToSave = pathToSave.Substring(Application.dataPath.Length - "Assets".Length);
+                            int count = 0;
                             foreach (var locale in phraseProvider.MissingLocalesLocally())
                             {
                                 UnityEngine.Localization.Locale newLocale = UnityEngine.Localization.Locale.CreateLocale(locale.code);
                                 AssetDatabase.CreateAsset(newLocale, $"{pathToSave}/{newLocale.ToString()}.asset");
+                                count++;
                             }
+                            EditorUtility.DisplayDialog("Locales created", $"{count} locale(s) created and saved to {pathToSave}.", "OK");
                         }
                     }
                     if (phraseProvider.MissingLocalesRemotely().Count > 0)
@@ -358,13 +365,16 @@ namespace Phrase
                         {
                             EditorGUILayout.LabelField(locale.Identifier.Code);
                         }
-                        if (GUILayout.Button("Create missing"))
+                        if (GUILayout.Button("Create locales on Phrase"))
                         {
+                            int count = 0;
                             foreach (var locale in phraseProvider.MissingLocalesRemotely())
                             {
                                 phraseProvider.CreatePhraseLocale(locale);
+                                count++;
                             }
                             phraseProvider.FetchLocales();
+                            EditorUtility.DisplayDialog("Locales created", $"{count} locale(s) created in Phrase.", "OK");
                         }
                     }
                 }
@@ -413,8 +423,7 @@ namespace Phrase
                 foreach (var locale in phraseProvider.Locales)
                 {
                     bool selectedState = phraseProvider.LocaleIdsToPull.Contains(locale.id);
-                    string localeLabel = locale.name == locale.code ? locale.name : $"{locale.name} ({locale.code})";
-                    bool newSelectedState = EditorGUILayout.ToggleLeft(localeLabel, selectedState);
+                    bool newSelectedState = EditorGUILayout.ToggleLeft(locale.ToString(), selectedState);
                     if (newSelectedState != selectedState)
                     {
                         if (newSelectedState)
