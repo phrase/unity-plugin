@@ -121,6 +121,25 @@ namespace Phrase
                 .ToList();
         }
 
+        public List<UnityEngine.Localization.Locale> MissingLocalesRemotely()
+        {
+            return LocalizationSettings.AvailableLocales.Locales
+                .Where(l => !Locales.Any(pl => pl.code == l.Identifier.Code))
+                .ToList();
+        }
+
+        public List<Locale> MissingLocalesLocally()
+        {
+            return Locales
+                .Where(pl => !LocalizationSettings.AvailableLocales.Locales.Any(l => l.Identifier.Code == pl.code))
+                .ToList();
+        }
+
+        public void CreatePhraseLocale(UnityEngine.Localization.Locale locale)
+        {
+            Client.CreateLocale(m_selectedProjectId, locale.Identifier.Code, locale.Identifier.Code);
+        }
+
         public void PushAll()
         {
             int count = 0;
@@ -163,7 +182,7 @@ namespace Phrase
             EditorUtility.DisplayDialog("Pull complete", $"{totalLocaleCount} locale(s) in {totalCount} table collection(s) imported.", "OK");
         }
 
-        public int Push(StringTableCollection collection)
+        public int Push(StringTableCollection collection, bool displayDialog = false)
         {
             int count = 0;
             foreach (var stringTable in collection.StringTables)
@@ -175,10 +194,14 @@ namespace Phrase
                     count++;
                 }
             }
+            if (displayDialog)
+            {
+                EditorUtility.DisplayDialog("Push complete", $"{count} locale(s) pushed.", "OK");
+            }
             return count;
         }
 
-        public void Push(StringTableCollection collection, Locale locale)
+        public void Push(StringTableCollection collection, Locale locale, bool displayDialog = false)
         {
             var matchingStringTable = collection.StringTables.FirstOrDefault(st => st.LocaleIdentifier.Code == locale.code);
             if (matchingStringTable == null)
@@ -192,9 +215,13 @@ namespace Phrase
             var xlfContent = File.ReadAllText(path);
             Client.UploadFile(xlfContent, m_selectedProjectId, locale.id, false);
             if (File.Exists(path)) File.Delete(path);
+            if (displayDialog)
+            {
+                EditorUtility.DisplayDialog("Push complete", $"Locale {locale.code} pushed.", "OK");
+            }
         }
 
-        public async Task<int> Pull(StringTableCollection collection)
+        public async Task<int> Pull(StringTableCollection collection, bool displayDialog = false)
         {
             int count = 0;
             foreach(var stringTable in collection.StringTables) {
@@ -218,6 +245,10 @@ namespace Phrase
                     Log("No Phrase locale found for string table " + stringTable.LocaleIdentifier.Code);
                 }
             }
+            if (displayDialog)
+            {
+                EditorUtility.DisplayDialog("Pull complete", $"{count} locale(s) imported.", "OK");
+            }
             return count;
         }
     }
@@ -228,6 +259,8 @@ namespace Phrase
         bool m_showTables = false;
 
         bool m_showConnection = false;
+
+        bool m_showLocalesMissing = false;
 
         static readonly string[] m_environmentOptions = { "EU", "US", "Custom" };
 
@@ -285,6 +318,57 @@ namespace Phrase
                 selectedProjectIndex = selectedProjectIndexNew;
                 phraseProvider.m_selectedProjectId = phraseProvider.Projects[selectedProjectIndex].id;
                 phraseProvider.FetchLocales();
+            }
+
+            if (phraseProvider.MissingLocalesLocally().Count > 0 || phraseProvider.MissingLocalesRemotely().Count > 0)
+            {
+                m_showLocalesMissing = EditorGUILayout.BeginFoldoutHeaderGroup(m_showLocalesMissing, "Missing locales");
+                if (m_showLocalesMissing)
+                {
+                    if (phraseProvider.MissingLocalesLocally().Count > 0)
+                    {
+                        EditorGUILayout.HelpBox("The following Phrase locales are missing in the project", MessageType.Warning);
+                        foreach (var locale in phraseProvider.MissingLocalesLocally())
+                        {
+                            EditorGUILayout.LabelField(locale.code);
+                        }
+                        if (GUILayout.Button("Create missing"))
+                        {
+                            string pathToSave = EditorUtility.OpenFolderPanel("Save new locales", "Assets", "");
+                            if (string.IsNullOrEmpty(pathToSave))
+                            {
+                                return;
+                            }
+                            if (!pathToSave.StartsWith(Application.dataPath)) {
+                                Debug.LogError("Path must be in the Assets folder");
+                                return;
+                            }
+                            pathToSave = pathToSave.Substring(Application.dataPath.Length - "Assets".Length);
+                            foreach (var locale in phraseProvider.MissingLocalesLocally())
+                            {
+                                UnityEngine.Localization.Locale newLocale = UnityEngine.Localization.Locale.CreateLocale(locale.code);
+                                AssetDatabase.CreateAsset(newLocale, $"{pathToSave}/{newLocale.ToString()}.asset");
+                            }
+                        }
+                    }
+                    if (phraseProvider.MissingLocalesRemotely().Count > 0)
+                    {
+                        EditorGUILayout.HelpBox("The following locales are missing in Phrase Strings", MessageType.Warning);
+                        foreach (var locale in phraseProvider.MissingLocalesRemotely())
+                        {
+                            EditorGUILayout.LabelField(locale.Identifier.Code);
+                        }
+                        if (GUILayout.Button("Create missing"))
+                        {
+                            foreach (var locale in phraseProvider.MissingLocalesRemotely())
+                            {
+                                phraseProvider.CreatePhraseLocale(locale);
+                            }
+                            phraseProvider.FetchLocales();
+                        }
+                    }
+                }
+                EditorGUILayout.EndFoldoutHeaderGroup();
             }
 
             m_showTables = EditorGUILayout.BeginFoldoutHeaderGroup(m_showTables, "Connected string tables");
