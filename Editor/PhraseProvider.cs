@@ -355,6 +355,7 @@ namespace Phrase
                                 AssetDatabase.CreateAsset(newLocale, $"{pathToSave}/{newLocale.ToString()}.asset");
                                 count++;
                             }
+                            LocalizationSettings.InitializationOperation.WaitForCompletion();
                             EditorUtility.DisplayDialog("Locales created", $"{count} locale(s) created and saved to {pathToSave}.", "OK");
                         }
                     }

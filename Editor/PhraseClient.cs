@@ -76,7 +76,7 @@ namespace Phrase
             public string name;
             public string code;
 
-            public string ToString()
+            public override string ToString()
             {
                 return name == code ? name : $"{name} ({code})";
             }
