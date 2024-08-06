@@ -134,10 +134,24 @@ namespace Phrase
                 .ToList();
         }
 
+        public List<UnityEngine.Localization.Locale> AvailableLocalesRemotely()
+        {
+            return LocalizationSettings.AvailableLocales.Locales
+                .Where(l => Locales.Any(pl => pl.code == l.Identifier.Code))
+                .ToList();
+        }
+
         public List<Locale> MissingLocalesLocally()
         {
             return Locales
                 .Where(pl => !LocalizationSettings.AvailableLocales.Locales.Any(l => l.Identifier.Code == pl.code))
+                .ToList();
+        }
+
+        public List<Locale> AvailableLocalesLocally()
+        {
+            return Locales
+                .Where(pl => LocalizationSettings.AvailableLocales.Locales.Any(l => l.Identifier.Code == pl.code))
                 .ToList();
         }
 
@@ -471,13 +485,13 @@ namespace Phrase
             {
                 // Push locale selection
                 phraseProvider.m_pushOnlySelected = EditorGUILayout.BeginToggleGroup("Push only selected locale:", phraseProvider.m_pushOnlySelected);
-                string[] availableLocaleNames = LocalizationSettings.AvailableLocales.Locales.Select(l => l.Identifier.Code).ToArray();
-                int selectedLocaleIndex = LocalizationSettings.AvailableLocales.Locales.FindIndex(l => l.Identifier.Code == phraseProvider.m_selectedLocaleId);
+                string[] availableLocaleNames = phraseProvider.AvailableLocalesRemotely().Select(l => l.Identifier.Code).ToArray();
+                int selectedLocaleIndex = phraseProvider.AvailableLocalesRemotely().FindIndex(l => l.Identifier.Code == phraseProvider.m_selectedLocaleId);
                 int selectedLocaleIndexNew = EditorGUILayout.Popup("Locale", selectedLocaleIndex, availableLocaleNames);
                 if (selectedLocaleIndexNew != selectedLocaleIndex)
                 {
                     selectedLocaleIndex = selectedLocaleIndexNew;
-                    phraseProvider.m_selectedLocaleId = LocalizationSettings.AvailableLocales.Locales[selectedLocaleIndex].Identifier.Code;
+                    phraseProvider.m_selectedLocaleId = phraseProvider.AvailableLocalesRemotely()[selectedLocaleIndex].Identifier.Code;
                 }
                 EditorGUILayout.EndToggleGroup();
 
@@ -489,7 +503,7 @@ namespace Phrase
 
                 phraseProvider.m_pullOnlySelected = EditorGUILayout.BeginToggleGroup("Pull only selected locales:", phraseProvider.m_pullOnlySelected);
 
-                foreach (var locale in phraseProvider.Locales)
+                foreach (var locale in phraseProvider.AvailableLocalesLocally())
                 {
                     bool selectedState = phraseProvider.LocaleIdsToPull.Contains(locale.id);
                     bool newSelectedState = EditorGUILayout.ToggleLeft(locale.ToString(), selectedState);
