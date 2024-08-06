@@ -384,31 +384,34 @@ namespace Phrase
                             }
                         }
 
-                        if (GUILayout.Button("Create locales locally"))
+                        using (new EditorGUI.DisabledScope(selectedLocalesToCreateLocally.Count == 0))
                         {
-                            string pathToSave = EditorUtility.OpenFolderPanel("Save new locales", "Assets", "");
-                            if (string.IsNullOrEmpty(pathToSave))
+                            if (GUILayout.Button("Create locales locally"))
                             {
-                                return;
-                            }
-                            if (!pathToSave.StartsWith(Application.dataPath)) {
-                                Debug.LogError("Path must be in the Assets folder");
-                                return;
-                            }
-                            pathToSave = pathToSave.Substring(Application.dataPath.Length - "Assets".Length);
-                            int count = 0;
-                            foreach (var locale in phraseProvider.MissingLocalesLocally())
-                            {
-                                if (!selectedLocalesToCreateLocally.Contains(locale.code))
+                                string pathToSave = EditorUtility.OpenFolderPanel("Save new locales", "Assets", "");
+                                if (string.IsNullOrEmpty(pathToSave))
                                 {
-                                    continue;
+                                    return;
                                 }
-                                UnityEngine.Localization.Locale newLocale = UnityEngine.Localization.Locale.CreateLocale(locale.code);
-                                AssetDatabase.CreateAsset(newLocale, $"{pathToSave}/{newLocale.ToString()}.asset");
-                                count++;
+                                if (!pathToSave.StartsWith(Application.dataPath)) {
+                                    Debug.LogError("Path must be in the Assets folder");
+                                    return;
+                                }
+                                pathToSave = pathToSave.Substring(Application.dataPath.Length - "Assets".Length);
+                                int count = 0;
+                                foreach (var locale in phraseProvider.MissingLocalesLocally())
+                                {
+                                    if (!selectedLocalesToCreateLocally.Contains(locale.code))
+                                    {
+                                        continue;
+                                    }
+                                    UnityEngine.Localization.Locale newLocale = UnityEngine.Localization.Locale.CreateLocale(locale.code);
+                                    AssetDatabase.CreateAsset(newLocale, $"{pathToSave}/{newLocale.ToString()}.asset");
+                                    count++;
+                                }
+                                LocalizationSettings.InitializationOperation.WaitForCompletion();
+                                EditorUtility.DisplayDialog("Locales created", $"{count} locale(s) created and saved to {pathToSave}.", "OK");
                             }
-                            LocalizationSettings.InitializationOperation.WaitForCompletion();
-                            EditorUtility.DisplayDialog("Locales created", $"{count} locale(s) created and saved to {pathToSave}.", "OK");
                         }
                     }
                     if (phraseProvider.MissingLocalesRemotely().Count > 0)
@@ -444,20 +447,23 @@ namespace Phrase
                                 selectedLocalesToCreateRemotely.Remove(locale.Identifier.Code);
                             }
                         }
-                        if (GUILayout.Button("Create locales on Phrase"))
+                        using (new EditorGUI.DisabledScope(selectedLocalesToCreateRemotely.Count == 0))
                         {
-                            int count = 0;
-                            foreach (var locale in phraseProvider.MissingLocalesRemotely())
+                            if (GUILayout.Button("Create locales on Phrase"))
                             {
-                                if (!selectedLocalesToCreateRemotely.Contains(locale.Identifier.Code))
+                                int count = 0;
+                                foreach (var locale in phraseProvider.MissingLocalesRemotely())
                                 {
-                                    continue;
+                                    if (!selectedLocalesToCreateRemotely.Contains(locale.Identifier.Code))
+                                    {
+                                        continue;
+                                    }
+                                    phraseProvider.CreatePhraseLocale(locale);
+                                    count++;
                                 }
-                                phraseProvider.CreatePhraseLocale(locale);
-                                count++;
+                                phraseProvider.FetchLocales();
+                                EditorUtility.DisplayDialog("Locales created", $"{count} locale(s) created in Phrase.", "OK");
                             }
-                            phraseProvider.FetchLocales();
-                            EditorUtility.DisplayDialog("Locales created", $"{count} locale(s) created in Phrase.", "OK");
                         }
                     }
                 }
