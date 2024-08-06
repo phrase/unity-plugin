@@ -429,7 +429,6 @@ namespace Phrase
                             {
                                 selectedLocalesToCreateRemotely.Remove(locale.Identifier.Code);
                             }
-                            EditorGUILayout.LabelField(locale.Identifier.Code);
                         }
                         if (GUILayout.Button("Create locales on Phrase"))
                         {
