@@ -369,6 +369,7 @@ namespace Phrase
                                 selectAllLocalesToCreateLocally = false;
                             }
                         }
+                        EditorGUI.indentLevel++;
                         foreach (var locale in phraseProvider.MissingLocalesLocally())
                         {
                             if (EditorGUILayout.ToggleLeft(locale.ToString(), selectedLocalesToCreateLocally.Contains(locale.code)))
@@ -383,6 +384,7 @@ namespace Phrase
                                 selectedLocalesToCreateLocally.Remove(locale.code);
                             }
                         }
+                        EditorGUI.indentLevel--;
 
                         using (new EditorGUI.DisabledScope(selectedLocalesToCreateLocally.Count == 0))
                         {
@@ -433,6 +435,7 @@ namespace Phrase
                                 selectAllLocalesToCreateRemotely = false;
                             }
                         }
+                        EditorGUI.indentLevel++;
                         foreach (var locale in phraseProvider.MissingLocalesRemotely())
                         {
                             if (EditorGUILayout.ToggleLeft(locale.ToString(), selectedLocalesToCreateRemotely.Contains(locale.Identifier.Code)))
@@ -447,6 +450,7 @@ namespace Phrase
                                 selectedLocalesToCreateRemotely.Remove(locale.Identifier.Code);
                             }
                         }
+                        EditorGUI.indentLevel--;
                         using (new EditorGUI.DisabledScope(selectedLocalesToCreateRemotely.Count == 0))
                         {
                             if (GUILayout.Button("Create locales on Phrase"))
@@ -491,6 +495,7 @@ namespace Phrase
             {
                 // Push locale selection
                 phraseProvider.m_pushOnlySelected = EditorGUILayout.BeginToggleGroup("Push only selected locale:", phraseProvider.m_pushOnlySelected);
+                EditorGUI.indentLevel++;
                 string[] availableLocaleNames = phraseProvider.AvailableLocalesRemotely().Select(l => l.Identifier.Code).ToArray();
                 int selectedLocaleIndex = phraseProvider.AvailableLocalesRemotely().FindIndex(l => l.Identifier.Code == phraseProvider.m_selectedLocaleId);
                 int selectedLocaleIndexNew = EditorGUILayout.Popup("Locale", selectedLocaleIndex, availableLocaleNames);
@@ -499,6 +504,7 @@ namespace Phrase
                     selectedLocaleIndex = selectedLocaleIndexNew;
                     phraseProvider.m_selectedLocaleId = phraseProvider.AvailableLocalesRemotely()[selectedLocaleIndex].Identifier.Code;
                 }
+                EditorGUI.indentLevel--;
                 EditorGUILayout.EndToggleGroup();
 
                 string pushButtonLabel = phraseProvider.m_pushOnlySelected ? "Push selected" : "Push all";
@@ -508,7 +514,7 @@ namespace Phrase
                 }
 
                 phraseProvider.m_pullOnlySelected = EditorGUILayout.BeginToggleGroup("Pull only selected locales:", phraseProvider.m_pullOnlySelected);
-
+                EditorGUI.indentLevel++;
                 foreach (var locale in phraseProvider.AvailableLocalesLocally())
                 {
                     bool selectedState = phraseProvider.LocaleIdsToPull.Contains(locale.id);
@@ -525,6 +531,7 @@ namespace Phrase
                         }
                     }
                 }
+                EditorGUI.indentLevel--;
 
                 EditorGUILayout.EndToggleGroup();
                 string pullButtonLabel = phraseProvider.m_pullOnlySelected ? "Pull selected" : "Pull all";
