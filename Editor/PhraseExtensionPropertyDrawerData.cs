@@ -38,10 +38,8 @@ namespace Phrase
             EditorGUI.PropertyField(position, m_keyPrefix);
             position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
 
-            // add push and pull buttons
             if (m_provider.objectReferenceValue != null)
             {
-                // var provider = m_provider.objectReferenceValue as PhraseProvider;
                 if (provider != null)
                 {
                     var buttonWidth = position.width / 2 - EditorGUIUtility.standardVerticalSpacing;
@@ -51,7 +49,7 @@ namespace Phrase
                     {
                         var extension = property.GetActualObjectForSerializedProperty<PhraseExtension>(fieldInfo);
                         var collection = extension.TargetCollection as StringTableCollection;
-                        provider.Push(collection);
+                        provider.Push(collection, true);
                     }
 
                     buttonPosition.x += buttonWidth + EditorGUIUtility.standardVerticalSpacing;
@@ -59,7 +57,7 @@ namespace Phrase
                     {
                         var extension = property.GetActualObjectForSerializedProperty<PhraseExtension>(fieldInfo);
                         var collection = extension.TargetCollection as StringTableCollection;
-                        await provider.Pull(collection);
+                        await provider.Pull(collection, true);
                     }
                     position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
                 }

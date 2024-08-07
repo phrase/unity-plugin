@@ -75,6 +75,11 @@ namespace Phrase
             public string id;
             public string name;
             public string code;
+
+            public override string ToString()
+            {
+                return name == code ? name : $"{name} ({code})";
+            }
         }
 
         [Serializable]
@@ -129,6 +134,16 @@ namespace Phrase
             response.EnsureSuccessStatusCode();
             string jsonResponse = await response.Content.ReadAsStringAsync();
             return JsonConvert.DeserializeObject<List<Locale>>(jsonResponse);
+        }
+
+        public async void CreateLocale(string projectID, string localeCode, string localeName)
+        {
+            string url = string.Format("projects/{0}/locales", projectID);
+            var content = new StringContent(JsonConvert.SerializeObject(new { code = localeCode, name = localeName }), Encoding.UTF8, "application/json");
+            Provider.Log("content: " + await content.ReadAsStringAsync());
+            var response = await Client.PostAsync(url, content);
+            Provider.Log("Response: " + await response.Content.ReadAsStringAsync());
+            response.EnsureSuccessStatusCode();
         }
 
         public async Task<List<Project>> ListProjects()
