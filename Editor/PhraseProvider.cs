@@ -77,7 +77,6 @@ namespace Phrase
         public void SetOauthToken(string token)
         {
             m_OauthToken = token;
-            // m_OauthInProgress = false;
             FetchProjects();
         }
 

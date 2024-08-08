@@ -242,7 +242,6 @@ namespace Phrase
             if (listener.IsListening)
             {
                 listener.Stop();
-                provider.Log("Server stopped");
             }
             if (stopperTimer != null)
             {
