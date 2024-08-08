@@ -77,7 +77,6 @@ namespace Phrase
         public void SetOauthToken(string token)
         {
             m_OauthToken = token;
-            m_OauthInProgress = false;
             FetchProjects();
         }
 
@@ -335,24 +334,26 @@ namespace Phrase
                 }
 
                 phraseProvider.m_UseOauth = !EditorGUILayout.BeginToggleGroup("Token authentication", !phraseProvider.m_UseOauth);
+                EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiKey"));
                 if (GUILayout.Button("Fetch Projects"))
                 {
                     phraseProvider.FetchProjects();
                 }
+                EditorGUI.indentLevel--;
                 EditorGUILayout.EndToggleGroup();
                 serializedObject.ApplyModifiedProperties();
                 phraseProvider.m_UseOauth = EditorGUILayout.BeginToggleGroup("OAuth authentication", phraseProvider.m_UseOauth);
-
+                EditorGUI.indentLevel++;
                 using (new EditorGUI.DisabledScope(phraseProvider.m_OauthInProgress))
                 {
                     string buttonLabel = phraseProvider.m_OauthInProgress ? "Logging in..." : "Log in using OAuth";
                     if (GUILayout.Button(buttonLabel))
                     {
-                        phraseProvider.m_OauthInProgress = true;
                         PhraseOauthAuthenticator.Authenticate(phraseProvider);
                     }
                 }
+                EditorGUI.indentLevel--;
                 EditorGUILayout.EndToggleGroup();
             }
             EditorGUILayout.EndFoldoutHeaderGroup();

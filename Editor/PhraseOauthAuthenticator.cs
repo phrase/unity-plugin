@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 using UnityEngine;
@@ -46,9 +47,11 @@ namespace Phrase
     {
         private static PhraseProvider provider;
 
-        private static HttpListener listener;
+        private static readonly HttpListener listener = new HttpListener();
 
         private static readonly string listenUrl = "http://localhost:8000/oauth/";
+
+        private static readonly int OauthTimeout = 5*60*1000; // 5 minutes
         private static readonly string redirectUrl = $"{listenUrl}/callback";
         private static string pageSuccess =
 @"<html>
@@ -164,33 +167,38 @@ namespace Phrase
         private static async Task HandleIncomingConnections()
         {
             bool runServer = true;
+            try {
 
-            // While a user hasn't successfully authenticated, keep on handling requests
-            while (runServer)
-            {
-                provider.Log("Waiting for a request...");
-                // Will wait here until we hear from a connection
-                HttpListenerContext ctx = await listener.GetContextAsync();
-                HttpListenerRequest req = ctx.Request;
-
-                // Print out some info about the request
-                provider.Log($"Request: {req.HttpMethod} {req.Url.ToString()}");
-
-                string code = Regex.Match(req.Url.Query, "code=([^&]*)").Groups[1].Value;
-                if (code != "")
+                // While a user hasn't successfully authenticated, keep on handling requests
+                while (runServer)
                 {
-                    var accessTokenResponse = await GetAccessToken(code);
-                    accessToken = accessTokenResponse.access_token;
-                    var userResponse = await GetUser(accessToken);
-                    organizationId = userResponse.lastOrganization.uid;
-                    await RefreshToken();
-                    SendPageContent(ctx.Response, pageSuccess);
-                    runServer = false;
-                    provider.Log("Closing server...");
-                    StopServer();
-                } else {
-                    SendPageContent(ctx.Response, "Error: No code found in the request");
+                    provider.Log("Waiting for a request...");
+                    // Will wait here until we hear from a connection
+                    HttpListenerContext ctx = await listener.GetContextAsync();
+                    HttpListenerRequest req = ctx.Request;
+
+                    // Print out some info about the request
+                    provider.Log($"Request: {req.HttpMethod} {req.Url.ToString()}");
+
+                    string code = Regex.Match(req.Url.Query, "code=([^&]*)").Groups[1].Value;
+                    if (code != "")
+                    {
+                        var accessTokenResponse = await GetAccessToken(code);
+                        accessToken = accessTokenResponse.access_token;
+                        var userResponse = await GetUser(accessToken);
+                        organizationId = userResponse.lastOrganization.uid;
+                        await RefreshToken();
+                        SendPageContent(ctx.Response, pageSuccess);
+                        runServer = false;
+                        provider.Log("Closing server...");
+                        StopServer(null);
+                    } else {
+                        SendPageContent(ctx.Response, "Error: No code found in the request");
+                    }
                 }
+            } catch (ObjectDisposedException e) {
+                // This is expected when the server is stopped
+                provider.Log($"Error: {e.Message}");
             }
         }
 
@@ -218,8 +226,6 @@ namespace Phrase
 
         private static async void StartServer()
         {
-            // Create a Http server and start listening for incoming connections
-            listener = new HttpListener();
             listener.Prefixes.Add(listenUrl);
             listener.Start();
             provider.Log($"Listening for connections on {listenUrl}");
@@ -228,15 +234,28 @@ namespace Phrase
             await HandleIncomingConnections();
         }
 
-        private static void StopServer()
+        private static Timer stopperTimer;
+
+        private static void StopServer(object state)
         {
-            listener.Close();
+            provider.Log("Stopping server...");
+            if (listener.IsListening)
+            {
+                listener.Stop();
+            }
+            if (stopperTimer != null)
+            {
+                stopperTimer.Dispose();
+            }
+            provider.m_OauthInProgress = false;
         }
 
         public static void Authenticate(PhraseProvider provider) {
             PhraseOauthAuthenticator.provider = provider;
+            provider.m_OauthInProgress = true;
             StartServer();
             HandleAuthorizationCodeFlow();
+            stopperTimer = new Timer(StopServer, null, OauthTimeout, Timeout.Infinite);
         }
     }
 }
