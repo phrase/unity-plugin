@@ -119,6 +119,10 @@ namespace Phrase
                 .ToList();
         }
 
+        /// <summary>
+        /// Returns the StringTableCollections that are connected to Phrase provider
+        /// </summary>
+        /// <returns></returns>
         public List<StringTableCollection> ConnectedStringTableCollections()
         {
             return AllStringTableCollections()
@@ -126,6 +130,10 @@ namespace Phrase
                 .ToList();
         }
 
+        /// <summary>
+        /// Returns the Unity locales that are missing in Phrase
+        /// </summary>
+        /// <returns></returns>
         public List<UnityEngine.Localization.Locale> MissingLocalesRemotely()
         {
             return LocalizationSettings.AvailableLocales.Locales
@@ -133,6 +141,10 @@ namespace Phrase
                 .ToList();
         }
 
+        /// <summary>
+        /// Returns the Unity locales that are existing in Phrase
+        /// </summary>
+        /// <returns></returns>
         public List<UnityEngine.Localization.Locale> AvailableLocalesRemotely()
         {
             return LocalizationSettings.AvailableLocales.Locales
@@ -140,6 +152,10 @@ namespace Phrase
                 .ToList();
         }
 
+        /// <summary>
+        /// Returns the Phrase locales that are missing in the Unity project
+        /// </summary>
+        /// <returns></returns>
         public List<Locale> MissingLocalesLocally()
         {
             return Locales
@@ -147,6 +163,10 @@ namespace Phrase
                 .ToList();
         }
 
+        /// <summary>
+        /// Returns the Phrase locales that are existing in the Unity project
+        /// </summary>
+        /// <returns></returns>
         public List<Locale> AvailableLocalesLocally()
         {
             return Locales
@@ -231,8 +251,7 @@ namespace Phrase
             const string dir = "Temp/";
             string path = dir + matchingStringTable.name + ".xlf";
             Xliff.Export(matchingStringTable, dir, XliffVersion.V12, new[] { matchingStringTable });
-            var xlfContent = File.ReadAllText(path);
-            Client.UploadFile(xlfContent, m_selectedProjectId, locale.id, false);
+            Client.UploadFile(path, m_selectedProjectId, locale.id, false);
             if (File.Exists(path)) File.Delete(path);
             if (displayDialog)
             {
@@ -571,6 +590,11 @@ namespace Phrase
             }
         }
 
+        /// <summary>
+        /// Attaches or detaches the PhraseExtension to the StringTableCollection
+        /// </summary>
+        /// <param name="collection"></param>
+        /// <param name="selectedState"></param>
         private void TogglePhraseExtension(StringTableCollection collection, bool selectedState)
         {
             PhraseExtension extension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
