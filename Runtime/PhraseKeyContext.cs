@@ -1,4 +1,8 @@
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Components;
+using UnityEngine.Localization.Tables;
 
 namespace Phrase
 {

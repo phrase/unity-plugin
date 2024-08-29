@@ -4,46 +4,77 @@ using UnityEngine.Localization.Components;
 using UnityEngine.Localization;
 using UnityEngine.Localization.Tables;
 using System.Linq;
+using UnityEditor.Localization;
 
 namespace Phrase
 {
   [CustomEditor(typeof(PhraseKeyContext))]
   public class PhraseKeyContextEditor : Editor
   {
+
+    private bool isWritingScreenshot = false;
+    private string screenshotPath = "";
+
+    private PhraseKeyContext Context => (PhraseKeyContext)target;
+
+    private LocalizeStringEvent LocalizeStringEvent => Context.GetComponent<LocalizeStringEvent>();
+
+    private LocalizedString StringReference => LocalizeStringEvent.StringReference;
+
+    private SharedTableData SharedTableData
+    {
+      get
+      {
+        if (LocalizeStringEvent == null)
+        {
+          return null;
+        }
+
+        var guid = StringReference.TableReference.TableCollectionNameGuid.ToString("N");
+        var path = AssetDatabase.GUIDToAssetPath(guid);
+        return AssetDatabase.LoadAssetAtPath<SharedTableData>(path);
+      }
+    }
+
+    private string KeyName => StringReference.TableEntryReference.ResolveKeyName(SharedTableData);
+
+    private StringTableCollection StringTableCollection => PhraseProvider.ConnectedStringTableCollections().FirstOrDefault(x => x.SharedData == SharedTableData);
+
+    private PhraseProvider Provider => PhraseProvider.FindFor(StringTableCollection);
     public override void OnInspectorGUI()
     {
-      PhraseKeyContext context = (PhraseKeyContext)target;
-      if (GUILayout.Button("Upload Screenshot"))
+      bool isConnected = LocalizeStringEvent != null && Provider != null && KeyName != null;
+      if (isConnected)
       {
-        LocalizeStringEvent localizeStringEvent = context.GetComponent<LocalizeStringEvent>();
-        if (localizeStringEvent != null)
-        {
-          LocalizedString stringReference = localizeStringEvent.StringReference;
+        EditorGUILayout.LabelField("Key Name", KeyName);
+        EditorGUILayout.LabelField("Description", Context.Description);
+        if (isWritingScreenshot) {
+          EditorGUILayout.LabelField("Uploading screenshot...");
+          if (System.IO.File.Exists(screenshotPath)) {
+            Provider.UploadScreenshot(KeyName, screenshotPath);
+            System.IO.File.Delete(screenshotPath);
 
-          // Get the key name
-          var guid = stringReference.TableReference.TableCollectionNameGuid.ToString("N");
-          Debug.Log($"SharedTableData GUID: {guid}");
-          var path = AssetDatabase.GUIDToAssetPath(guid);
-          var sharedTableData = AssetDatabase.LoadAssetAtPath<SharedTableData>(path);
-          Debug.Log(sharedTableData);
-          string keyName = stringReference.TableEntryReference.ResolveKeyName(sharedTableData);
-
-          // Get Phrase provider from the table
-          var stringTableCollection = PhraseProvider.ConnectedStringTableCollections().FirstOrDefault(x => x.SharedData == sharedTableData);
-          Debug.Log(stringTableCollection);
-
-          // Make the screenshot
-          string screenshotPath = "Temp/phrase_screenshot.png";
-          ScreenCapture.CaptureScreenshot(screenshotPath);
-          // pause for 2 seconds to allow the screenshot to be saved
-          System.Threading.Thread.Sleep(2000);
-
-          // Upload screenshot
-          var provider = PhraseProvider.FindFor(stringTableCollection);
-          provider.UploadScreenshot(keyName, screenshotPath);
-
-          EditorUtility.DisplayDialog("Upload Screenshot", $"Will upload screenshot for {keyName}", "OK");
+            EditorUtility.DisplayDialog("Upload Screenshot", $"Screenshot uploaded for {KeyName}", "OK");
+            isWritingScreenshot = false;
+          }
         }
+        else {
+          if (GUILayout.Button("Upload Screenshot"))
+          {
+            if (LocalizeStringEvent != null)
+            {
+              screenshotPath = "Temp/phrase_screenshot.png";
+              System.IO.File.Delete(screenshotPath);
+              ScreenCapture.CaptureScreenshot(screenshotPath);
+              // the screenshot is only written in the next frame
+              isWritingScreenshot = true;
+            }
+          }
+        }
+      }
+      else
+      {
+        EditorGUILayout.LabelField("No LocalizeStringEvent found on this GameObject");
       }
     }
   }
