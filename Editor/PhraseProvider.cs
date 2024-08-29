@@ -8,7 +8,6 @@ using UnityEditor.Localization;
 using UnityEditor.Localization.Plugins.XLIFF;
 using UnityEngine.Localization.Settings;
 using static Phrase.PhraseClient;
-using static Phrase.PhraseOauthAuthenticator;
 
 namespace Phrase
 {
@@ -110,7 +109,7 @@ namespace Phrase
             LocaleIdsToPull.Clear();
         }
 
-        public List<StringTableCollection> AllStringTableCollections()
+        public static List<StringTableCollection> AllStringTableCollections()
         {
             return AssetDatabase
                 .FindAssets("t:StringTableCollection")
@@ -123,11 +122,17 @@ namespace Phrase
         /// Returns the StringTableCollections that are connected to Phrase provider
         /// </summary>
         /// <returns></returns>
-        public List<StringTableCollection> ConnectedStringTableCollections()
+        public static List<StringTableCollection> ConnectedStringTableCollections()
         {
             return AllStringTableCollections()
                 .Where(collection => collection.Extensions.Any(e => e is PhraseExtension))
                 .ToList();
+        }
+
+        public static PhraseProvider FindFor(StringTableCollection collection)
+        {
+            var extension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
+            return extension?.m_provider;
         }
 
         /// <summary>
@@ -288,6 +293,11 @@ namespace Phrase
                 EditorUtility.DisplayDialog("Pull complete", $"{count} locale(s) imported.", "OK");
             }
             return count;
+        }
+
+        public async void UploadScreenshot(string keyName, string path)
+        {
+            await Client.UploadScreenshot(m_selectedProjectId, keyName, path);
         }
     }
 
@@ -523,7 +533,7 @@ namespace Phrase
             m_showTables = EditorGUILayout.BeginFoldoutHeaderGroup(m_showTables, "Connected string tables");
             if (m_showTables)
             {
-                List<StringTableCollection> allCollections = phraseProvider.AllStringTableCollections();
+                List<StringTableCollection> allCollections = PhraseProvider.AllStringTableCollections();
                 foreach (StringTableCollection collection in allCollections)
                 {
                     var extension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;

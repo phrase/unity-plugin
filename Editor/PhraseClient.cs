@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using UnityEngine;
 using Newtonsoft.Json;
 
 namespace Phrase
@@ -165,14 +164,16 @@ namespace Phrase
             await HttpUploadFile(url, path, "file", "text/plain", nvc);
         }
 
-        // public async Task<Screenshot> UploadScreenshot(byte[] image, string projectID, string localeID)
-        // {
-        //     string url = string.Format("{0}/projects/{1}/screenshots", ApiUrl, projectID);
-        //     NameValueCollection nvc = new NameValueCollection();
-        //     var response = await HttpUploadFile(url, "unity.jpg", "filename", "image/jpeg", nvc, image);
-        //     var screenshot = JsonUtility.FromJson<Screenshot>(response);
-        //     return screenshot;
-        // }
+        public async Task<Screenshot> UploadScreenshot(string projectID, string keyName, string path)
+        {
+            string url = string.Format("{0}/projects/{1}/screenshots", ApiUrl, projectID);
+            NameValueCollection nvc = new NameValueCollection
+            {
+                { "name", keyName }
+            };
+            string responseString = await HttpUploadFile(url, path, "filename", "image/png", nvc);
+            return JsonConvert.DeserializeObject<Screenshot>(responseString);
+        }
 
         private async Task<string> HttpUploadFile(string url, string path, string paramName, string contentType, NameValueCollection nvc)
         {
