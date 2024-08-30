@@ -162,7 +162,8 @@ namespace Phrase
             string url = string.Format("projects/{0}/screenshots", projectID);
             NameValueCollection nvc = new NameValueCollection
             {
-                { "name", name }
+                { "name", name },
+                { "description", "Uploaded from Unity" }
             };
             string responseString = await HttpUploadFile(url, path, "filename", "image/png", nvc);
             return JsonConvert.DeserializeObject<Screenshot>(responseString);

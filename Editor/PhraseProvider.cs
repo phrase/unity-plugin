@@ -131,6 +131,10 @@ namespace Phrase
 
         public static PhraseProvider FindFor(StringTableCollection collection)
         {
+            if (collection == null)
+            {
+                return null;
+            }
             var extension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
             return extension?.m_provider;
         }
@@ -295,7 +299,7 @@ namespace Phrase
             return count;
         }
 
-        public async void UploadScreenshot(string keyName, string path)
+        public async Task<Screenshot> UploadScreenshot(string keyName, string path)
         {
             string name = keyName + "_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
             Screenshot screenshot = await Client.UploadScreenshot(m_selectedProjectId, name, path);
@@ -307,6 +311,7 @@ namespace Phrase
                     Client.CreateScreenshotMarker(m_selectedProjectId, screenshot.id, key.id);
                 }
             }
+            return screenshot;
         }
     }
 

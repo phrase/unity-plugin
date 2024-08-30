@@ -5,6 +5,7 @@ using UnityEngine.Localization;
 using UnityEngine.Localization.Tables;
 using System.Linq;
 using UnityEditor.Localization;
+using static Phrase.PhraseClient;
 
 namespace Phrase
 {
@@ -17,9 +18,9 @@ namespace Phrase
 
     private PhraseKeyContext Context => (PhraseKeyContext)target;
 
-    private LocalizeStringEvent LocalizeStringEvent => Context.GetComponent<LocalizeStringEvent>();
+    private LocalizeStringEvent LocalizeStringEvent => Context?.GetComponent<LocalizeStringEvent>();
 
-    private LocalizedString StringReference => LocalizeStringEvent.StringReference;
+    private LocalizedString StringReference => LocalizeStringEvent?.StringReference;
 
     private SharedTableData SharedTableData
     {
@@ -48,11 +49,13 @@ namespace Phrase
       {
         EditorGUILayout.LabelField("Key Name", KeyName);
         EditorGUILayout.LabelField("Description", Context.Description);
+        EditorGUILayout.LabelField("Screenshot ID", Context.ScreenshotId);
         if (isWritingScreenshot) {
           EditorGUILayout.LabelField("Uploading screenshot...");
           if (System.IO.File.Exists(screenshotPath)) {
-            Provider.UploadScreenshot(KeyName, screenshotPath);
+            Screenshot screenshot = Provider.UploadScreenshot(KeyName, screenshotPath).Result;
             System.IO.File.Delete(screenshotPath);
+            Context.ScreenshotId = screenshot.id;
 
             EditorUtility.DisplayDialog("Upload Screenshot", $"Screenshot uploaded for {KeyName}", "OK");
             isWritingScreenshot = false;
@@ -75,7 +78,7 @@ namespace Phrase
       }
       else
       {
-        EditorGUILayout.LabelField("No LocalizeStringEvent found on this GameObject");
+        EditorGUILayout.LabelField("This object is not connected to a Phrase key.");
       }
     }
   }
