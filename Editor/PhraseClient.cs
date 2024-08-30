@@ -31,7 +31,7 @@ namespace Phrase
             for (int i = 0; i < MaxRetries; i++)
             {
                 Provider.Log("Sending request to " + request.RequestUri);
-                response = await base.SendAsync(request, cancellationToken);
+                response = base.SendAsync(request, cancellationToken).Result;
                 if (response.IsSuccessStatusCode) {
                     return response;
                 }
@@ -93,6 +93,13 @@ namespace Phrase
             public string id;
         }
 
+        [Serializable]
+        public class Key
+        {
+            public string id;
+            public string name;
+        }
+
         public PhraseClient(PhraseProvider provider)
         {
             this.Provider = provider;
@@ -100,20 +107,6 @@ namespace Phrase
             // Client.DefaultRequestHeaders.Add("Authorization", "Bearer " + AccessToken);
             Client.DefaultRequestHeaders.Add("User-Agent", "Unity Plugin/1.0");
             Client.BaseAddress = new Uri(ApiUrl);
-        }
-
-        private HttpWebRequest CreateRequest(string url) {
-            Provider.Log("Creating request to " + url);
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-
-            Uri uri = new Uri(url);
-            request.PreAuthenticate = true;
-
-            // authenticate using the access token
-            request.Headers.Add("Authorization", "Bearer " + AccessToken);
-
-            request.UserAgent = "Unity Plugin/1.0";
-            return request;
         }
 
         public async Task<string> DownloadLocale(string projectID, string localeID)
@@ -138,9 +131,7 @@ namespace Phrase
         {
             string url = string.Format("projects/{0}/locales", projectID);
             var content = new StringContent(JsonConvert.SerializeObject(new { code = localeCode, name = localeName }), Encoding.UTF8, "application/json");
-            Provider.Log("content: " + await content.ReadAsStringAsync());
             var response = await Client.PostAsync(url, content);
-            Provider.Log("Response: " + await response.Content.ReadAsStringAsync());
             response.EnsureSuccessStatusCode();
         }
 
@@ -154,25 +145,45 @@ namespace Phrase
 
         public async void UploadFile(string path, string projectID, string localeID, bool autoTranslate)
         {
-            string url = string.Format("{0}/projects/{1}/uploads", ApiUrl, projectID);
-            NameValueCollection nvc = new NameValueCollection();
-            nvc.Add("locale_id", localeID);
-            nvc.Add("file_format", "xlf");
-            nvc.Add("autotranslate", autoTranslate.ToString());
-            nvc.Add("format_options[key_name_attribute]", "resname");
+            string url = string.Format("projects/{0}/uploads", projectID);
+            NameValueCollection nvc = new NameValueCollection
+            {
+                { "locale_id", localeID },
+                { "file_format", "xlf" },
+                { "autotranslate", autoTranslate.ToString() },
+                { "format_options[key_name_attribute]", "resname" }
+            };
 
             await HttpUploadFile(url, path, "file", "text/plain", nvc);
         }
 
-        public async Task<Screenshot> UploadScreenshot(string projectID, string keyName, string path)
+        public async Task<Screenshot> UploadScreenshot(string projectID, string name, string path)
         {
-            string url = string.Format("{0}/projects/{1}/screenshots", ApiUrl, projectID);
+            string url = string.Format("projects/{0}/screenshots", projectID);
             NameValueCollection nvc = new NameValueCollection
             {
-                { "name", keyName }
+                { "name", name }
             };
             string responseString = await HttpUploadFile(url, path, "filename", "image/png", nvc);
             return JsonConvert.DeserializeObject<Screenshot>(responseString);
+        }
+
+        public void CreateScreenshotMarker(string projectID, string screenshotID, string keyID)
+        {
+            string url = string.Format("projects/{0}/screenshots/{1}/markers", projectID, screenshotID);
+            var content = new StringContent(JsonConvert.SerializeObject(new { key_id = keyID }), Encoding.UTF8, "application/json");
+            var response = Client.PostAsync(url, content).Result;
+            response.EnsureSuccessStatusCode();
+        }
+
+        public async Task<Key> GetKey(string projectID, string keyName)
+        {
+            string url = string.Format($"projects/{{0}}/keys?q=name:{Uri.EscapeDataString(keyName)}", projectID);
+            using HttpResponseMessage response = await Client.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            string jsonResponse = await response.Content.ReadAsStringAsync();
+            List<Key> keys = JsonConvert.DeserializeObject<List<Key>>(jsonResponse);
+            return keys.Find(k => k.name == keyName);
         }
 
         private async Task<string> HttpUploadFile(string url, string path, string paramName, string contentType, NameValueCollection nvc)
@@ -191,7 +202,6 @@ namespace Phrase
 
             var response = await Client.PostAsync(url, form);
             var responseContent = await response.Content.ReadAsStringAsync();
-            Provider.Log("Response: " + responseContent);
             response.EnsureSuccessStatusCode();
             return Task.FromResult(responseContent).Result;
         }

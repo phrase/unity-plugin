@@ -297,7 +297,16 @@ namespace Phrase
 
         public async void UploadScreenshot(string keyName, string path)
         {
-            await Client.UploadScreenshot(m_selectedProjectId, keyName, path);
+            string name = keyName + "_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
+            Screenshot screenshot = await Client.UploadScreenshot(m_selectedProjectId, name, path);
+            if (screenshot != null)
+            {
+                Key key = await Client.GetKey(m_selectedProjectId, keyName);
+                if (key != null)
+                {
+                    Client.CreateScreenshotMarker(m_selectedProjectId, screenshot.id, key.id);
+                }
+            }
         }
     }
 

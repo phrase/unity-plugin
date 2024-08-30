@@ -65,6 +65,7 @@ namespace Phrase
             {
               screenshotPath = "Temp/phrase_screenshot.png";
               System.IO.File.Delete(screenshotPath);
+              EditorApplication.ExecuteMenuItem("Window/General/Game"); // screenshot only works in game view
               ScreenCapture.CaptureScreenshot(screenshotPath);
               // the screenshot is only written in the next frame
               isWritingScreenshot = true;
