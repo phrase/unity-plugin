@@ -299,7 +299,7 @@ namespace Phrase
             return count;
         }
 
-        public async Task<Screenshot> UploadScreenshot(string keyName, string path)
+        public async void UploadScreenshot(string keyName, string path, PhraseKeyContext context)
         {
             string name = keyName + "_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
             Screenshot screenshot = await Client.UploadScreenshot(m_selectedProjectId, name, path);
@@ -311,7 +311,7 @@ namespace Phrase
                     Client.CreateScreenshotMarker(m_selectedProjectId, screenshot.id, key.id);
                 }
             }
-            return screenshot;
+            context.ScreenshotId = screenshot.id;
         }
     }
 

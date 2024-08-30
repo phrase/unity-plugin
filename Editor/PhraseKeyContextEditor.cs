@@ -53,9 +53,8 @@ namespace Phrase
         if (isWritingScreenshot) {
           EditorGUILayout.LabelField("Uploading screenshot...");
           if (System.IO.File.Exists(screenshotPath)) {
-            Screenshot screenshot = Provider.UploadScreenshot(KeyName, screenshotPath).Result;
+            Provider.UploadScreenshot(KeyName, screenshotPath, Context);
             System.IO.File.Delete(screenshotPath);
-            Context.ScreenshotId = screenshot.id;
 
             EditorUtility.DisplayDialog("Upload Screenshot", $"Screenshot uploaded for {KeyName}", "OK");
             isWritingScreenshot = false;
