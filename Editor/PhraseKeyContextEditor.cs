@@ -7,6 +7,8 @@ using System.Linq;
 using UnityEditor.Localization;
 using System.Collections;
 using Unity.EditorCoroutines.Editor;
+using UnityEngine.Localization.PropertyVariants;
+using UnityEngine.Localization.PropertyVariants.TrackedProperties;
 
 namespace Phrase
 {
@@ -17,13 +19,38 @@ namespace Phrase
 
     private LocalizeStringEvent LocalizeStringEvent => Context?.GetComponent<LocalizeStringEvent>();
 
-    private LocalizedString StringReference => LocalizeStringEvent?.StringReference;
+    private LocalizedString StringReference
+    {
+      get
+      {
+        if (LocalizeStringEvent != null)
+        {
+          return LocalizeStringEvent.StringReference;
+        }
+
+        GameObjectLocalizer localizer = Context.GetComponentInParent<GameObjectLocalizer>();
+        if (localizer != null)
+        {
+          var trackedObject = localizer.TrackedObjects.FirstOrDefault();
+          if (trackedObject != null)
+          {
+            var trackedProperty = trackedObject.TrackedProperties.FirstOrDefault();
+            if (trackedProperty != null)
+            {
+              return (trackedProperty as LocalizedStringProperty).LocalizedString;
+            }
+          }
+        }
+
+        return null;
+      }
+    }
 
     private SharedTableData SharedTableData
     {
       get
       {
-        if (LocalizeStringEvent == null)
+        if (StringReference == null)
         {
           return null;
         }
@@ -56,7 +83,7 @@ namespace Phrase
 
     public override void OnInspectorGUI()
     {
-      bool isConnected = LocalizeStringEvent != null && Provider != null && KeyName != null;
+      bool isConnected = SharedTableData != null && Provider != null && KeyName != null;
       if (isConnected)
       {
         EditorGUILayout.LabelField("Key Name", KeyName);
@@ -64,10 +91,7 @@ namespace Phrase
         EditorGUILayout.LabelField("Screenshot ID", Context.ScreenshotId);
         if (GUILayout.Button("Upload Screenshot"))
         {
-          if (LocalizeStringEvent != null)
-          {
-            EditorCoroutineUtility.StartCoroutine(UploadScreenshot(KeyName, Context), this);
-          }
+          EditorCoroutineUtility.StartCoroutine(UploadScreenshot(KeyName, Context), this);
         }
       }
       else
