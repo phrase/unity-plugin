@@ -8,7 +8,6 @@ using UnityEditor.Localization;
 using UnityEditor.Localization.Plugins.XLIFF;
 using UnityEngine.Localization.Settings;
 using static Phrase.PhraseClient;
-using static Phrase.PhraseOauthAuthenticator;
 
 namespace Phrase
 {
@@ -110,7 +109,7 @@ namespace Phrase
             LocaleIdsToPull.Clear();
         }
 
-        public List<StringTableCollection> AllStringTableCollections()
+        public static List<StringTableCollection> AllStringTableCollections()
         {
             return AssetDatabase
                 .FindAssets("t:StringTableCollection")
@@ -123,11 +122,21 @@ namespace Phrase
         /// Returns the StringTableCollections that are connected to Phrase provider
         /// </summary>
         /// <returns></returns>
-        public List<StringTableCollection> ConnectedStringTableCollections()
+        public static List<StringTableCollection> ConnectedStringTableCollections()
         {
             return AllStringTableCollections()
                 .Where(collection => collection.Extensions.Any(e => e is PhraseExtension))
                 .ToList();
+        }
+
+        public static PhraseProvider FindFor(StringTableCollection collection)
+        {
+            if (collection == null)
+            {
+                return null;
+            }
+            var extension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
+            return extension?.m_provider;
         }
 
         /// <summary>
@@ -288,6 +297,21 @@ namespace Phrase
                 EditorUtility.DisplayDialog("Pull complete", $"{count} locale(s) imported.", "OK");
             }
             return count;
+        }
+
+        public async void UploadScreenshot(string keyName, string path, PhraseKeyContext context)
+        {
+            string name = keyName + "_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
+            Screenshot screenshot = await Client.UploadScreenshot(m_selectedProjectId, name, path);
+            if (screenshot != null)
+            {
+                Key key = await Client.GetKey(m_selectedProjectId, keyName);
+                if (key != null)
+                {
+                    Client.CreateScreenshotMarker(m_selectedProjectId, screenshot.id, key.id);
+                }
+            }
+            context.ScreenshotId = screenshot.id;
         }
     }
 
@@ -523,7 +547,7 @@ namespace Phrase
             m_showTables = EditorGUILayout.BeginFoldoutHeaderGroup(m_showTables, "Connected string tables");
             if (m_showTables)
             {
-                List<StringTableCollection> allCollections = phraseProvider.AllStringTableCollections();
+                List<StringTableCollection> allCollections = PhraseProvider.AllStringTableCollections();
                 foreach (StringTableCollection collection in allCollections)
                 {
                     var extension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
