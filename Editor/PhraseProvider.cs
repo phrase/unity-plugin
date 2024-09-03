@@ -322,62 +322,21 @@ namespace Phrase
         private PhraseProvider phraseProvider => target as PhraseProvider;
 
         private string searchQuery = "";
-        private Vector2 scrollPos;
-
     
-public override void OnInspectorGUI()
-{
-    serializedObject.Update();
-
-    ShowConnectionSection();
-
-    // Add a search box
-    searchQuery = EditorGUILayout.TextField("Filter by Projectname", searchQuery);
-
-    // Filter projects based on the search query
-    var filteredProjects = phraseProvider.Projects
-        .Where(p => string.IsNullOrEmpty(searchQuery) || p.name.IndexOf(searchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
-        .ToArray();
-
-    // Display the total count of projects
-    EditorGUILayout.LabelField($"Total Projects: {filteredProjects.Length} / {phraseProvider.Projects.Count}");
-
-    // Truncate project names for the dropdown
-    string[] projectNames = filteredProjects
-        .Select(p => TruncateWithEllipsis(p.name, 50)) // Adjust the maxLength as needed
-        .ToArray();
-
-    int selectedProjectIndex = System.Array.IndexOf(filteredProjects, phraseProvider.Projects.FirstOrDefault(p => p.id == phraseProvider.m_selectedProjectId));
-    
-    // Ensure valid index
-    if (selectedProjectIndex == -1 && filteredProjects.Length > 0)
-    {
-        selectedProjectIndex = 0; // Default to first project if no selection matches
-    }
-
-    // Create the dropdown and ensure it doesn't cause extra space
-    selectedProjectIndex = EditorGUILayout.Popup("Select Project", selectedProjectIndex, projectNames);
-
-    // Update the selected project if changed
-    if (selectedProjectIndex >= 0 && selectedProjectIndex < filteredProjects.Length)
-    {
-        var selectedProject = filteredProjects[selectedProjectIndex];
-        if (selectedProjectName != selectedProject.name)
+        public override void OnInspectorGUI()
         {
-            selectedProjectName = selectedProject.name;
-            phraseProvider.m_selectedProjectId = selectedProject.id;
-            phraseProvider.FetchLocales();
+            serializedObject.Update();
+
+            ShowConnectionSection();
+            ShowProjectSection();
+            ShowLocaleMismatchSection();
+            ShowConnectedTablesSection();
+            ShowPushPullSection();
+
+            serializedObject.ApplyModifiedProperties();
         }
-    }
 
-    ShowLocaleMismatchSection();
-    ShowConnectedTablesSection();
-    ShowPushPullSection();
-
-    serializedObject.ApplyModifiedProperties();
-}
-
-private string selectedProjectName;
+        private string selectedProjectName;
         private const int MaxCharsPerLine = 30; // Maximum characters per line
 
         private string TruncateWithEllipsis(string input, int maxLength)
@@ -431,6 +390,48 @@ private string selectedProjectName;
                 EditorGUILayout.EndToggleGroup();
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
+        }
+
+        private void ShowProjectSection()
+        {
+            // Add a search box
+            searchQuery = EditorGUILayout.TextField("Filter by Projectname", searchQuery);
+
+            // Filter projects based on the search query
+            var filteredProjects = phraseProvider.Projects
+                .Where(p => string.IsNullOrEmpty(searchQuery) || p.name.IndexOf(searchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToArray();
+
+            // Display the total count of projects
+            EditorGUILayout.LabelField($"Projects: {filteredProjects.Length} / {phraseProvider.Projects.Count}");
+
+            // Truncate project names more aggressively to control popup width
+            string[] projectNames = filteredProjects
+                .Select(p => TruncateWithEllipsis(p.name, 30)) // Adjust the maxLength to a smaller value
+                .ToArray();
+
+            int selectedProjectIndex = System.Array.IndexOf(filteredProjects, phraseProvider.Projects.FirstOrDefault(p => p.id == phraseProvider.m_selectedProjectId));
+
+            // Ensure valid index
+            if (selectedProjectIndex == -1 && filteredProjects.Length > 0)
+            {
+                selectedProjectIndex = 0; // Default to first project if no selection matches
+            }
+
+            // Keep the label's position intact and adjust the dropdown content
+            selectedProjectIndex = EditorGUILayout.Popup("Select Project", selectedProjectIndex, projectNames);
+
+            // Update the selected project if changed
+            if (selectedProjectIndex >= 0 && selectedProjectIndex < filteredProjects.Length)
+            {
+                var selectedProject = filteredProjects[selectedProjectIndex];
+                if (selectedProjectName != selectedProject.name)
+                {
+                    selectedProjectName = selectedProject.name;
+                    phraseProvider.m_selectedProjectId = selectedProject.id;
+                    phraseProvider.FetchLocales();
+                }
+            }
         }
 
         private void ShowLocaleMismatchSection() {
