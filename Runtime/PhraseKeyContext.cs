@@ -7,7 +7,7 @@ using UnityEngine.Localization.Tables;
 namespace Phrase
 {
   [ExecuteInEditMode]
-  [RequireComponent(typeof(LocalizeStringEvent))]
+  // [RequireComponent(typeof(LocalizeStringEvent))]
   [AddComponentMenu("Localization/Phrase Key Context")]
   public class PhraseKeyContext : MonoBehaviour
   {
