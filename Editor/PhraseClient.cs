@@ -145,9 +145,9 @@ namespace Phrase
             response.EnsureSuccessStatusCode();
         }
 
-        public async Task<List<Project>> ListProjects()
+        public async Task<List<Project>> ListProjects(int page = 1)
         {
-            using HttpResponseMessage response = await Client.GetAsync("projects?per_page=100");
+            using HttpResponseMessage response = await Client.GetAsync($"projects?per_page=100&page={page}");
             response.EnsureSuccessStatusCode();
             string jsonResponse = await response.Content.ReadAsStringAsync();
             return JsonConvert.DeserializeObject<List<Project>>(jsonResponse);

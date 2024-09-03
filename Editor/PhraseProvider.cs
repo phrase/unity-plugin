@@ -95,13 +95,25 @@ namespace Phrase
 
         public async void FetchProjects()
         {
-            Projects = await Client.ListProjects();
+            // Initialize the Projects list to accumulate all fetched projects
+            Projects = new List<Project>();
+
+            int page = 1;
+            List<Project> currentBatch;
+
+            do
+            {
+                currentBatch = await Client.ListProjects(page);
+                Projects.AddRange(currentBatch);
+                page++;
+            } while (currentBatch.Count == 100);  // Continue if a full batch is returned
+
             FetchLocales();
         }
 
         public async void FetchLocales()
         {
-            if (m_selectedProjectId == null)
+            if (m_selectedProjectId == null || m_selectedProjectId == "")
             {
                 return;
             }
@@ -309,29 +321,57 @@ namespace Phrase
 
         private PhraseProvider phraseProvider => target as PhraseProvider;
 
+        private string searchQuery = "";
+        private Vector2 scrollPos;
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
 
             ShowConnectionSection();
 
-            string[] projectNames = phraseProvider.Projects.Select(p => p.name).ToArray();
-            int selectedProjectIndex = phraseProvider.Projects.FindIndex(p => p.id == phraseProvider.m_selectedProjectId);
+            // Add a search box
+            searchQuery = EditorGUILayout.TextField("Search Project", searchQuery);
 
-            int selectedProjectIndexNew = EditorGUILayout.Popup("Project", selectedProjectIndex, projectNames);
+            // Filter projects based on the search query
+            var filteredProjects = phraseProvider.Projects
+                .Where(p => string.IsNullOrEmpty(searchQuery) || p.name.IndexOf(searchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToArray();
+
+            string[] projectNames = filteredProjects
+                    .Select(p => TruncateWithEllipsis(p.name, 50))
+                    .ToArray();
+            int selectedProjectIndex = System.Array.IndexOf(filteredProjects, phraseProvider.Projects.FirstOrDefault(p => p.id == phraseProvider.m_selectedProjectId));
+
+            // Create a scrollable list of filtered projects
+            scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.Height(150));
+            int selectedProjectIndexNew = GUILayout.SelectionGrid(selectedProjectIndex, projectNames, 1);
+            EditorGUILayout.EndScrollView();
+
+            // Update the selected project if changed
             if (selectedProjectIndexNew != selectedProjectIndex)
             {
                 selectedProjectIndex = selectedProjectIndexNew;
-                phraseProvider.m_selectedProjectId = phraseProvider.Projects[selectedProjectIndex].id;
+                phraseProvider.m_selectedProjectId = filteredProjects[selectedProjectIndex].id;
                 phraseProvider.FetchLocales();
             }
 
             ShowLocaleMismatchSection();
-
             ShowConnectedTablesSection();
-
             ShowPushPullSection();
 
+            serializedObject.ApplyModifiedProperties();
+        }
+
+        private const int MaxCharsPerLine = 30; // Maximum characters per line
+
+        private string TruncateWithEllipsis(string input, int maxLength)
+        {
+            if (string.IsNullOrEmpty(input) || input.Length <= maxLength)
+            {
+                return input;
+            }
+            return input.Substring(0, maxLength) + "...";
         }
 
         private void ShowConnectionSection() {
