@@ -324,68 +324,60 @@ namespace Phrase
         private string searchQuery = "";
         private Vector2 scrollPos;
 
-        public override void OnInspectorGUI()
+    
+public override void OnInspectorGUI()
+{
+    serializedObject.Update();
+
+    ShowConnectionSection();
+
+    // Add a search box
+    searchQuery = EditorGUILayout.TextField("Filter by Projectname", searchQuery);
+
+    // Filter projects based on the search query
+    var filteredProjects = phraseProvider.Projects
+        .Where(p => string.IsNullOrEmpty(searchQuery) || p.name.IndexOf(searchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
+        .ToArray();
+
+    // Display the total count of projects
+    EditorGUILayout.LabelField($"Total Projects: {filteredProjects.Length} / {phraseProvider.Projects.Count}");
+
+    // Truncate project names for the dropdown
+    string[] projectNames = filteredProjects
+        .Select(p => TruncateWithEllipsis(p.name, 50)) // Adjust the maxLength as needed
+        .ToArray();
+
+    int selectedProjectIndex = System.Array.IndexOf(filteredProjects, phraseProvider.Projects.FirstOrDefault(p => p.id == phraseProvider.m_selectedProjectId));
+    
+    // Ensure valid index
+    if (selectedProjectIndex == -1 && filteredProjects.Length > 0)
+    {
+        selectedProjectIndex = 0; // Default to first project if no selection matches
+    }
+
+    // Create the dropdown and ensure it doesn't cause extra space
+    selectedProjectIndex = EditorGUILayout.Popup("Select Project", selectedProjectIndex, projectNames);
+
+    // Update the selected project if changed
+    if (selectedProjectIndex >= 0 && selectedProjectIndex < filteredProjects.Length)
+    {
+        var selectedProject = filteredProjects[selectedProjectIndex];
+        if (selectedProjectName != selectedProject.name)
         {
-            serializedObject.Update();
-
-            ShowConnectionSection();
-
-            // Add a search box
-            searchQuery = EditorGUILayout.TextField("Search Project", searchQuery);
-
-            // Filter projects based on the search query
-            var filteredProjects = phraseProvider.Projects
-                .Where(p => string.IsNullOrEmpty(searchQuery) || p.name.IndexOf(searchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
-                .ToArray();
-
-            // Create a scrollable area
-            scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.Height(150));
-
-            int numberOfColumns = 2; // Number of columns in the grid
-            int rowCount = Mathf.CeilToInt(filteredProjects.Length / (float)numberOfColumns);
-
-            for (int row = 0; row < rowCount; row++)
-            {
-                EditorGUILayout.BeginHorizontal();
-
-                for (int column = 0; column < numberOfColumns; column++)
-                {
-                    int index = row * numberOfColumns + column;
-                    if (index < filteredProjects.Length)
-                    {
-                        var project = filteredProjects[index];
-
-                        bool isSelected = (selectedProjectName == project.name);
-                        bool newIsSelected = GUILayout.Toggle(isSelected, project.name, GUILayout.MaxWidth(200)); // Adjust MaxWidth as needed
-
-                        if (newIsSelected && !isSelected)
-                        {
-                            selectedProjectName = project.name;
-                            phraseProvider.m_selectedProjectId = project.id;
-                            phraseProvider.FetchLocales();
-                        }
-                        else if (!newIsSelected && isSelected)
-                        {
-                            selectedProjectName = null;
-                        }
-                    }
-                }
-
-                EditorGUILayout.EndHorizontal();
-            }
-
-            EditorGUILayout.EndScrollView();
-
-            ShowLocaleMismatchSection();
-            ShowConnectedTablesSection();
-            ShowPushPullSection();
-
-            serializedObject.ApplyModifiedProperties();
+            selectedProjectName = selectedProject.name;
+            phraseProvider.m_selectedProjectId = selectedProject.id;
+            phraseProvider.FetchLocales();
         }
+    }
 
-        // Variable to hold the name of the selected project
-        private string selectedProjectName;
+    ShowLocaleMismatchSection();
+    ShowConnectedTablesSection();
+    ShowPushPullSection();
 
+    serializedObject.ApplyModifiedProperties();
+}
+
+private string selectedProjectName;
         private const int MaxCharsPerLine = 30; // Maximum characters per line
 
         private string TruncateWithEllipsis(string input, int maxLength)
