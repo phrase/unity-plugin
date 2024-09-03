@@ -337,7 +337,6 @@ namespace Phrase
         }
 
         private string selectedProjectName;
-        private const int MaxCharsPerLine = 30; // Maximum characters per line
 
         private string TruncateWithEllipsis(string input, int maxLength)
         {
@@ -394,7 +393,6 @@ namespace Phrase
 
         private void ShowProjectSection()
         {
-            // Add a search box
             searchQuery = EditorGUILayout.TextField("Filter by Projectname", searchQuery);
 
             // Filter projects based on the search query
@@ -402,12 +400,11 @@ namespace Phrase
                 .Where(p => string.IsNullOrEmpty(searchQuery) || p.name.IndexOf(searchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
                 .ToArray();
 
-            // Display the total count of projects
             EditorGUILayout.LabelField($"Projects: {filteredProjects.Length} / {phraseProvider.Projects.Count}");
 
             // Truncate project names more aggressively to control popup width
             string[] projectNames = filteredProjects
-                .Select(p => TruncateWithEllipsis(p.name, 30)) // Adjust the maxLength to a smaller value
+                .Select(p => TruncateWithEllipsis(p.name, 30))
                 .ToArray();
 
             int selectedProjectIndex = System.Array.IndexOf(filteredProjects, phraseProvider.Projects.FirstOrDefault(p => p.id == phraseProvider.m_selectedProjectId));
@@ -418,10 +415,8 @@ namespace Phrase
                 selectedProjectIndex = 0; // Default to first project if no selection matches
             }
 
-            // Keep the label's position intact and adjust the dropdown content
             selectedProjectIndex = EditorGUILayout.Popup("Select Project", selectedProjectIndex, projectNames);
 
-            // Update the selected project if changed
             if (selectedProjectIndex >= 0 && selectedProjectIndex < filteredProjects.Length)
             {
                 var selectedProject = filteredProjects[selectedProjectIndex];
@@ -597,52 +592,58 @@ namespace Phrase
         private void ShowPushPullSection() {
             using (new EditorGUI.DisabledScope(!phraseProvider.IsProjectSelected))
             {
-                // Push locale selection
-                phraseProvider.m_pushOnlySelected = EditorGUILayout.BeginToggleGroup("Push only selected locale:", phraseProvider.m_pushOnlySelected);
-                EditorGUI.indentLevel++;
-                string[] availableLocaleNames = phraseProvider.AvailableLocalesRemotely().Select(l => l.Identifier.Code).ToArray();
-                int selectedLocaleIndex = phraseProvider.AvailableLocalesRemotely().FindIndex(l => l.Identifier.Code == phraseProvider.m_selectedLocaleId);
-                int selectedLocaleIndexNew = EditorGUILayout.Popup("Locale", selectedLocaleIndex, availableLocaleNames);
-                if (selectedLocaleIndexNew != selectedLocaleIndex)
-                {
-                    selectedLocaleIndex = selectedLocaleIndexNew;
-                    phraseProvider.m_selectedLocaleId = phraseProvider.AvailableLocalesRemotely()[selectedLocaleIndex].Identifier.Code;
-                }
-                EditorGUI.indentLevel--;
-                EditorGUILayout.EndToggleGroup();
+               ShowPushSection();
+               ShowPullSection();
+            }
+        }
 
-                string pushButtonLabel = phraseProvider.m_pushOnlySelected ? "Push selected" : "Push all";
-                if (GUILayout.Button(pushButtonLabel))
-                {
-                    phraseProvider.PushAll();
-                }
+        private void ShowPushSection() {
+            phraseProvider.m_pushOnlySelected = EditorGUILayout.BeginToggleGroup("Push only selected locale:", phraseProvider.m_pushOnlySelected);
+            EditorGUI.indentLevel++;
+            string[] availableLocaleNames = phraseProvider.AvailableLocalesRemotely().Select(l => l.Identifier.Code).ToArray();
+            int selectedLocaleIndex = phraseProvider.AvailableLocalesRemotely().FindIndex(l => l.Identifier.Code == phraseProvider.m_selectedLocaleId);
+            int selectedLocaleIndexNew = EditorGUILayout.Popup("Locale", selectedLocaleIndex, availableLocaleNames);
+            if (selectedLocaleIndexNew != selectedLocaleIndex)
+            {
+                selectedLocaleIndex = selectedLocaleIndexNew;
+                phraseProvider.m_selectedLocaleId = phraseProvider.AvailableLocalesRemotely()[selectedLocaleIndex].Identifier.Code;
+            }
+            EditorGUI.indentLevel--;
+            EditorGUILayout.EndToggleGroup();
 
-                phraseProvider.m_pullOnlySelected = EditorGUILayout.BeginToggleGroup("Pull only selected locales:", phraseProvider.m_pullOnlySelected);
-                EditorGUI.indentLevel++;
-                foreach (var locale in phraseProvider.AvailableLocalesLocally())
+            string pushButtonLabel = phraseProvider.m_pushOnlySelected ? "Push selected" : "Push all";
+            if (GUILayout.Button(pushButtonLabel))
+            {
+                phraseProvider.PushAll();
+            }
+        }
+
+        private void ShowPullSection() {
+            phraseProvider.m_pullOnlySelected = EditorGUILayout.BeginToggleGroup("Pull only selected locales:", phraseProvider.m_pullOnlySelected);
+            EditorGUI.indentLevel++;
+            foreach (var locale in phraseProvider.AvailableLocalesLocally())
+            {
+                bool selectedState = phraseProvider.LocaleIdsToPull.Contains(locale.id);
+                bool newSelectedState = EditorGUILayout.ToggleLeft(locale.ToString(), selectedState);
+                if (newSelectedState != selectedState)
                 {
-                    bool selectedState = phraseProvider.LocaleIdsToPull.Contains(locale.id);
-                    bool newSelectedState = EditorGUILayout.ToggleLeft(locale.ToString(), selectedState);
-                    if (newSelectedState != selectedState)
+                    if (newSelectedState)
                     {
-                        if (newSelectedState)
-                        {
-                            phraseProvider.LocaleIdsToPull.Add(locale.id);
-                        }
-                        else
-                        {
-                            phraseProvider.LocaleIdsToPull.Remove(locale.id);
-                        }
+                        phraseProvider.LocaleIdsToPull.Add(locale.id);
+                    }
+                    else
+                    {
+                        phraseProvider.LocaleIdsToPull.Remove(locale.id);
                     }
                 }
-                EditorGUI.indentLevel--;
+            }
+            EditorGUI.indentLevel--;
 
-                EditorGUILayout.EndToggleGroup();
-                string pullButtonLabel = phraseProvider.m_pullOnlySelected ? "Pull selected" : "Pull all";
-                if (GUILayout.Button(pullButtonLabel))
-                {
-                    phraseProvider.PullAll();
-                }
+            EditorGUILayout.EndToggleGroup();
+            string pullButtonLabel = phraseProvider.m_pullOnlySelected ? "Pull selected" : "Pull all";
+            if (GUILayout.Button(pullButtonLabel))
+            {
+                phraseProvider.PullAll();
             }
         }
 
