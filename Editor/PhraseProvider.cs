@@ -8,6 +8,10 @@ using UnityEditor.Localization;
 using UnityEditor.Localization.Plugins.XLIFF;
 using UnityEngine.Localization.Settings;
 using static Phrase.PhraseClient;
+using UnityEditor.Localization.Plugins.CSV;
+using System.Text;
+using System.Data;
+using UnityEditor.Localization.Plugins.CSV.Columns;
 
 namespace Phrase
 {
@@ -265,6 +269,31 @@ namespace Phrase
             if (displayDialog)
             {
                 EditorUtility.DisplayDialog("Push complete", $"Locale {locale.code} pushed.", "OK");
+            }
+        }
+
+        public void ExportCsv(StringTableCollection collection, Locale locale)
+        {
+            var matchingStringTable = collection.StringTables.FirstOrDefault(st => st.LocaleIdentifier.Code == locale.code);
+            if (matchingStringTable == null)
+            {
+                Debug.LogError("No matching string table found for locale " + locale.code);
+                return;
+            }
+            var columnMappings = new List<CsvColumns>
+            {
+                new KeyIdColumns {
+                    IncludeId = true
+                },
+                new LocaleColumns {
+                    LocaleIdentifier = locale.id
+                }
+            };
+            const string dir = "Temp/";
+            string path = dir + matchingStringTable.name + ".csv";
+            using (var stream = new StreamWriter(path, false, new UTF8Encoding(false)))
+            {
+                Csv.Export(stream, collection, columnMappings);
             }
         }
 
