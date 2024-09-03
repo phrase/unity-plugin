@@ -338,23 +338,43 @@ namespace Phrase
                 .Where(p => string.IsNullOrEmpty(searchQuery) || p.name.IndexOf(searchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
                 .ToArray();
 
-            string[] projectNames = filteredProjects
-                    .Select(p => TruncateWithEllipsis(p.name, 50))
-                    .ToArray();
-            int selectedProjectIndex = System.Array.IndexOf(filteredProjects, phraseProvider.Projects.FirstOrDefault(p => p.id == phraseProvider.m_selectedProjectId));
-
-            // Create a scrollable list of filtered projects
+            // Create a scrollable area
             scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.Height(150));
-            int selectedProjectIndexNew = GUILayout.SelectionGrid(selectedProjectIndex, projectNames, 1);
-            EditorGUILayout.EndScrollView();
 
-            // Update the selected project if changed
-            if (selectedProjectIndexNew != selectedProjectIndex)
+            int numberOfColumns = 2; // Number of columns in the grid
+            int rowCount = Mathf.CeilToInt(filteredProjects.Length / (float)numberOfColumns);
+
+            for (int row = 0; row < rowCount; row++)
             {
-                selectedProjectIndex = selectedProjectIndexNew;
-                phraseProvider.m_selectedProjectId = filteredProjects[selectedProjectIndex].id;
-                phraseProvider.FetchLocales();
+                EditorGUILayout.BeginHorizontal();
+
+                for (int column = 0; column < numberOfColumns; column++)
+                {
+                    int index = row * numberOfColumns + column;
+                    if (index < filteredProjects.Length)
+                    {
+                        var project = filteredProjects[index];
+
+                        bool isSelected = (selectedProjectName == project.name);
+                        bool newIsSelected = GUILayout.Toggle(isSelected, project.name, GUILayout.MaxWidth(200)); // Adjust MaxWidth as needed
+
+                        if (newIsSelected && !isSelected)
+                        {
+                            selectedProjectName = project.name;
+                            phraseProvider.m_selectedProjectId = project.id;
+                            phraseProvider.FetchLocales();
+                        }
+                        else if (!newIsSelected && isSelected)
+                        {
+                            selectedProjectName = null;
+                        }
+                    }
+                }
+
+                EditorGUILayout.EndHorizontal();
             }
+
+            EditorGUILayout.EndScrollView();
 
             ShowLocaleMismatchSection();
             ShowConnectedTablesSection();
@@ -362,6 +382,9 @@ namespace Phrase
 
             serializedObject.ApplyModifiedProperties();
         }
+
+        // Variable to hold the name of the selected project
+        private string selectedProjectName;
 
         private const int MaxCharsPerLine = 30; // Maximum characters per line
 
