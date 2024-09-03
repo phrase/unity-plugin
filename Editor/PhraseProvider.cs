@@ -253,26 +253,26 @@ namespace Phrase
             return count;
         }
 
-        public void Push(StringTableCollection collection, Locale locale, bool displayDialog = false)
-        {
-            var matchingStringTable = collection.StringTables.FirstOrDefault(st => st.LocaleIdentifier.Code == locale.code);
-            if (matchingStringTable == null)
-            {
-                Debug.LogError("No matching string table found for locale " + locale.code);
-                return;
-            }
-            const string dir = "Temp/";
-            string path = dir + matchingStringTable.name + ".xlf";
-            Xliff.Export(matchingStringTable, dir, XliffVersion.V12, new[] { matchingStringTable });
-            Client.UploadFile(path, m_selectedProjectId, locale.id, false);
-            if (File.Exists(path)) File.Delete(path);
-            if (displayDialog)
-            {
-                EditorUtility.DisplayDialog("Push complete", $"Locale {locale.code} pushed.", "OK");
-            }
-        }
+        // public void Push(StringTableCollection collection, Locale locale, bool displayDialog = false)
+        // {
+        //     var matchingStringTable = collection.StringTables.FirstOrDefault(st => st.LocaleIdentifier.Code == locale.code);
+        //     if (matchingStringTable == null)
+        //     {
+        //         Debug.LogError("No matching string table found for locale " + locale.code);
+        //         return;
+        //     }
+        //     const string dir = "Temp/";
+        //     string path = dir + matchingStringTable.name + ".xlf";
+        //     Xliff.Export(matchingStringTable, dir, XliffVersion.V12, new[] { matchingStringTable });
+        //     Client.UploadFile(path, m_selectedProjectId, locale.id, false);
+        //     if (File.Exists(path)) File.Delete(path);
+        //     if (displayDialog)
+        //     {
+        //         EditorUtility.DisplayDialog("Push complete", $"Locale {locale.code} pushed.", "OK");
+        //     }
+        // }
 
-        public void ExportCsv(StringTableCollection collection, Locale locale)
+        public void Push(StringTableCollection collection, Locale locale, bool displayDialog = false)
         {
             var matchingStringTable = collection.StringTables.FirstOrDefault(st => st.LocaleIdentifier.Code == locale.code);
             if (matchingStringTable == null)
@@ -283,17 +283,27 @@ namespace Phrase
             var columnMappings = new List<CsvColumns>
             {
                 new KeyIdColumns {
-                    IncludeId = true
+                    IncludeId = false,
+                    IncludeSharedComments = false,
+                    KeyFieldName = "key_name"
                 },
                 new LocaleColumns {
-                    LocaleIdentifier = locale.id
-                }
+                    LocaleIdentifier = locale.code,
+                    FieldName = locale.code
+                },
+                new PhraseCsvColumns()
             };
             const string dir = "Temp/";
             string path = dir + matchingStringTable.name + ".csv";
             using (var stream = new StreamWriter(path, false, new UTF8Encoding(false)))
             {
                 Csv.Export(stream, collection, columnMappings);
+            }
+            Client.UploadFile(path, m_selectedProjectId, locale.id, locale.code, false);
+            if (File.Exists(path)) File.Delete(path);
+            if (displayDialog)
+            {
+                EditorUtility.DisplayDialog("Push complete", $"Locale {locale.code} pushed.", "OK");
             }
         }
 

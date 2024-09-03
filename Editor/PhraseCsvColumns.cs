@@ -11,10 +11,13 @@ namespace Phrase
     {
         int m_DescriptionIndex, m_MaxCharsIndex;
 
+        private const string k_Description = "comment";
+        private const string k_MaxChars = "max_characters_allowed";
+
         public override void ReadBegin(StringTableCollection collection, CsvReader reader)
         {
-            m_DescriptionIndex = reader.GetFieldIndex("Description", isTryGet: true);
-            m_MaxCharsIndex = reader.GetFieldIndex("Max Chars", isTryGet: true);
+            m_DescriptionIndex = reader.GetFieldIndex(k_Description, isTryGet: true);
+            m_MaxCharsIndex = reader.GetFieldIndex(k_MaxChars, isTryGet: true);
         }
 
         public override void ReadRow(SharedTableData.SharedTableEntry keyEntry, CsvReader reader)
@@ -40,8 +43,8 @@ namespace Phrase
 
         public override void WriteBegin(StringTableCollection collection, CsvWriter writer)
         {
-            writer.WriteField("Description");
-            writer.WriteField("Max Chars");
+            writer.WriteField(k_Description);
+            writer.WriteField(k_MaxChars);
         }
 
         public override void WriteRow(SharedTableData.SharedTableEntry keyEntry, IList<StringTableEntry> tableEntries, CsvWriter writer)
