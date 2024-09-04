@@ -405,7 +405,7 @@ namespace Phrase
                 filteredProjects = allProjects
                     .Where(p => string.IsNullOrEmpty(searchQuery) || p.name.IndexOf(searchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
                     .ToArray();
-                EditorGUILayout.LabelField($"Projects: {filteredProjects.Length} / {phraseProvider.Projects.Count}", GUILayout.MaxWidth(120));
+                EditorGUILayout.LabelField($"{filteredProjects.Length}/{phraseProvider.Projects.Count}", GUILayout.Width(65));
                 EditorGUILayout.EndHorizontal();
             }
 
