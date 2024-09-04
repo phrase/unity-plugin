@@ -41,6 +41,10 @@ namespace Phrase
                 {
                     metadata.MaxLength = maxChars;
                 }
+                else
+                {
+                    metadata.MaxLength = 0;
+                }
             }
         }
 
@@ -56,13 +60,20 @@ namespace Phrase
             if (metadata != null)
             {
                 writer.WriteField(metadata.Description, true);
-                writer.WriteField(metadata.MaxLength);
+                if (metadata.MaxLength > 0)
+                {
+                    writer.WriteField(metadata.MaxLength);
+                }
+                else
+                {
+                    writer.WriteField(string.Empty);
+                }
                 return;
             }
 
             // Write empty entries
             writer.WriteField(string.Empty);
-            writer.WriteField(0);
+            writer.WriteField(string.Empty);
         }
     }
 }

@@ -89,11 +89,12 @@ namespace Phrase
       if (isConnected)
       {
         EditorGUILayout.LabelField("Key Name", KeyName);
-        if (Metadata != null)
+        if (Metadata == null)
         {
-          EditorGUILayout.LabelField("Description", Metadata.Description);
-          EditorGUILayout.LabelField("Max Characters", Metadata.MaxLength.ToString());
+          SharedTableData.GetEntry(KeyName).Metadata.AddMetadata(new PhraseMetadata());
         }
+        Metadata.Description = EditorGUILayout.TextField("Description", Metadata.Description);
+        Metadata.MaxLength = EditorGUILayout.IntField("Max Length (0 for no limit)", Metadata.MaxLength);
         EditorGUILayout.LabelField("Screenshot ID", Context.ScreenshotId);
         if (GUILayout.Button("Upload Screenshot"))
         {
