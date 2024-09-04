@@ -111,7 +111,7 @@ namespace Phrase
 
         public async Task<string> DownloadLocale(string projectID, string localeID)
         {
-            string url = string.Format("projects/{0}/locales/{1}/download?file_format=xlf&include_empty_translations=true", projectID, localeID);
+            string url = string.Format("projects/{0}/locales/{1}/download?file_format=csv&format_options%5Bexport_max_characters_allowed%5D=true&include_empty_translations=true", projectID, localeID);
             using HttpResponseMessage response = await Client.GetAsync(url);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();
@@ -143,15 +143,20 @@ namespace Phrase
             return JsonConvert.DeserializeObject<List<Project>>(jsonResponse);
         }
 
-        public async void UploadFile(string path, string projectID, string localeID, bool autoTranslate)
+        public async void UploadFile(string path, string projectID, string localeID, string localeCode, bool autoTranslate)
         {
             string url = string.Format("projects/{0}/uploads", projectID);
             NameValueCollection nvc = new NameValueCollection
             {
                 { "locale_id", localeID },
-                { "file_format", "xlf" },
+                { "file_format", "csv" },
+                { "header_content_row", "true" },
+                { "update_descriptions", "true" },
                 { "autotranslate", autoTranslate.ToString() },
-                { "format_options[key_name_attribute]", "resname" }
+                { $"locale_mapping[{localeCode}]", "2" },
+                { "format_options[key_index]", "1" },
+                { "format_options[comment_index]", "3" },
+                { "format_options[max_characters_allowed_column]", "4" }
             };
 
             await HttpUploadFile(url, path, "file", "text/plain", nvc);

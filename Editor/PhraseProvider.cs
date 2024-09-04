@@ -1,12 +1,18 @@
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+
 using UnityEngine;
+
 using UnityEditor;
 using UnityEditor.Localization;
-using UnityEditor.Localization.Plugins.XLIFF;
+using UnityEditor.Localization.Plugins.CSV;
+using UnityEditor.Localization.Plugins.CSV.Columns;
 using UnityEngine.Localization.Settings;
+
 using static Phrase.PhraseClient;
 
 namespace Phrase
@@ -261,6 +267,23 @@ namespace Phrase
             return count;
         }
 
+        private List<CsvColumns> ColumnMappings(Locale locale)
+        {
+            return new List<CsvColumns>
+            {
+                new KeyIdColumns {
+                    IncludeId = false,
+                    IncludeSharedComments = false,
+                    KeyFieldName = "key_name"
+                },
+                new LocaleColumns {
+                    LocaleIdentifier = locale.code,
+                    FieldName = locale.code
+                },
+                new PhraseCsvColumns()
+            };
+        }
+
         public void Push(StringTableCollection collection, Locale locale, bool displayDialog = false)
         {
             var matchingStringTable = collection.StringTables.FirstOrDefault(st => st.LocaleIdentifier.Code == locale.code);
@@ -270,9 +293,12 @@ namespace Phrase
                 return;
             }
             const string dir = "Temp/";
-            string path = dir + matchingStringTable.name + ".xlf";
-            Xliff.Export(matchingStringTable, dir, XliffVersion.V12, new[] { matchingStringTable });
-            Client.UploadFile(path, m_selectedProjectId, locale.id, false);
+            string path = dir + matchingStringTable.name + ".csv";
+            using (var stream = new StreamWriter(path, false, new UTF8Encoding(false)))
+            {
+                Csv.Export(stream, collection, ColumnMappings(locale));
+            }
+            Client.UploadFile(path, m_selectedProjectId, locale.id, locale.code, false);
             if (File.Exists(path)) File.Delete(path);
             if (displayDialog)
             {
@@ -292,10 +318,11 @@ namespace Phrase
                         continue;
                     }
                     Log("Downloading locale " + selectedLocale.code);
-                    string content = await Client.DownloadLocale(m_selectedProjectId, selectedLocale.id);
-                    using (var stream = new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)))
+                    var csvContent = await Client.DownloadLocale(m_selectedProjectId, selectedLocale.id);
+                    using (var reader = new StringReader(csvContent))
                     {
-                        Xliff.ImportDocumentIntoTable(XliffDocument.Parse(stream), stringTable);
+                        var columnMappings = ColumnMappings(selectedLocale);
+                        Csv.ImportInto(reader, collection, columnMappings);
                         count++;
                     }
                 }
