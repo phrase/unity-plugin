@@ -67,6 +67,8 @@ namespace Phrase
 
     private PhraseProvider Provider => PhraseProvider.FindFor(StringTableCollection);
 
+    private PhraseMetadata Metadata => SharedTableData?.GetEntry(KeyName)?.Metadata.GetMetadata<PhraseMetadata>();
+
     IEnumerator UploadScreenshot(string keyName, PhraseKeyContext context)
     {
       string screenshotPath = "Temp/phrase_screenshot.png";
@@ -87,7 +89,11 @@ namespace Phrase
       if (isConnected)
       {
         EditorGUILayout.LabelField("Key Name", KeyName);
-        EditorGUILayout.LabelField("Description", Context.Description);
+        if (Metadata != null)
+        {
+          EditorGUILayout.LabelField("Description", Metadata.Description);
+          EditorGUILayout.LabelField("Max Characters", Metadata.MaxLength.ToString());
+        }
         EditorGUILayout.LabelField("Screenshot ID", Context.ScreenshotId);
         if (GUILayout.Button("Upload Screenshot"))
         {
