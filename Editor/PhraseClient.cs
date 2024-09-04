@@ -111,7 +111,7 @@ namespace Phrase
 
         public async Task<string> DownloadLocale(string projectID, string localeID)
         {
-            string url = string.Format("projects/{0}/locales/{1}/download?file_format=xlf&include_empty_translations=true", projectID, localeID);
+            string url = string.Format("projects/{0}/locales/{1}/download?file_format=csv&format_options%5Bexport_max_characters_allowed%5D=true&include_empty_translations=true", projectID, localeID);
             using HttpResponseMessage response = await Client.GetAsync(url);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();

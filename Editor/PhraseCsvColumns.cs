@@ -37,7 +37,10 @@ namespace Phrase
 
             if (m_MaxCharsIndex != -1)
             {
-                metadata.MaxLength = reader.GetField<int>(m_MaxCharsIndex);
+                if (reader.TryGetField<int>(m_MaxCharsIndex, out var maxChars))
+                {
+                    metadata.MaxLength = maxChars;
+                }
             }
         }
 
