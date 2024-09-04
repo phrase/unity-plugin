@@ -394,21 +394,20 @@ namespace Phrase
 
         private void ShowProjectSection() {
             var allProjects = phraseProvider.Projects;
+            var filteredProjects = allProjects.ToArray();
+
+            // Only show Project-Filter if there are more than 10 projects
             if (allProjects.Count > 10)
             {
+                EditorGUILayout.BeginHorizontal();
                 searchQuery = EditorGUILayout.TextField("Filter by Projectname", searchQuery);
+                // Filter projects based on the search query
+                filteredProjects = allProjects
+                    .Where(p => string.IsNullOrEmpty(searchQuery) || p.name.IndexOf(searchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    .ToArray();
+                EditorGUILayout.LabelField($"Projects: {filteredProjects.Length} / {phraseProvider.Projects.Count}", GUILayout.MaxWidth(120));
+                EditorGUILayout.EndHorizontal();
             }
-            else
-            {
-                searchQuery = string.Empty;
-            }
-
-            // Filter projects based on the search query
-            var filteredProjects = allProjects
-                .Where(p => string.IsNullOrEmpty(searchQuery) || p.name.IndexOf(searchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
-                .ToArray();
-
-            EditorGUILayout.LabelField($"Projects: {filteredProjects.Length} / {phraseProvider.Projects.Count}");
 
             // Truncate project names more aggressively to control popup width
             string[] projectNames = filteredProjects
