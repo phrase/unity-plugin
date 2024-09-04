@@ -322,6 +322,7 @@ namespace Phrase
         private PhraseProvider phraseProvider => target as PhraseProvider;
 
         private string searchQuery = "";
+        private string localeSearchQuery = string.Empty;
     
         public override void OnInspectorGUI()
         {
@@ -391,12 +392,19 @@ namespace Phrase
             EditorGUILayout.EndFoldoutHeaderGroup();
         }
 
-        private void ShowProjectSection()
-        {
-            searchQuery = EditorGUILayout.TextField("Filter by Projectname", searchQuery);
+        private void ShowProjectSection() {
+            var allProjects = phraseProvider.Projects;
+            if (allProjects.Count > 10)
+            {
+                searchQuery = EditorGUILayout.TextField("Filter by Projectname", searchQuery);
+            }
+            else
+            {
+                searchQuery = string.Empty;
+            }
 
             // Filter projects based on the search query
-            var filteredProjects = phraseProvider.Projects
+            var filteredProjects = allProjects
                 .Where(p => string.IsNullOrEmpty(searchQuery) || p.name.IndexOf(searchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
                 .ToArray();
 
@@ -600,14 +608,39 @@ namespace Phrase
         private void ShowPushSection() {
             phraseProvider.m_pushOnlySelected = EditorGUILayout.BeginToggleGroup("Push only selected locale:", phraseProvider.m_pushOnlySelected);
             EditorGUI.indentLevel++;
-            string[] availableLocaleNames = phraseProvider.AvailableLocalesRemotely().Select(l => l.Identifier.Code).ToArray();
-            int selectedLocaleIndex = phraseProvider.AvailableLocalesRemotely().FindIndex(l => l.Identifier.Code == phraseProvider.m_selectedLocaleId);
-            int selectedLocaleIndexNew = EditorGUILayout.Popup("Locale", selectedLocaleIndex, availableLocaleNames);
-            if (selectedLocaleIndexNew != selectedLocaleIndex)
+            // Get the list of available locales
+            var allLocales = phraseProvider.AvailableLocalesRemotely();
+            
+            // Determine if the search field should be displayed
+            if (allLocales.Count > 10)
             {
-                selectedLocaleIndex = selectedLocaleIndexNew;
-                phraseProvider.m_selectedLocaleId = phraseProvider.AvailableLocalesRemotely()[selectedLocaleIndex].Identifier.Code;
+                localeSearchQuery = EditorGUILayout.TextField("Filter by Locale", localeSearchQuery);
             }
+            else
+            {
+                localeSearchQuery = string.Empty;
+            }
+
+            var filteredLocales = allLocales
+                .Where(l => string.IsNullOrEmpty(localeSearchQuery) || l.Identifier.Code.IndexOf(localeSearchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToArray();
+
+            string[] availableLocaleNames = filteredLocales.Select(l => l.Identifier.Code).ToArray();
+            int selectedLocaleIndex = System.Array.IndexOf(availableLocaleNames, phraseProvider.m_selectedLocaleId);
+
+            // Ensure valid index
+            if (selectedLocaleIndex == -1 && availableLocaleNames.Length > 0)
+            {
+                selectedLocaleIndex = 0; 
+            }
+
+            selectedLocaleIndex = EditorGUILayout.Popup("Locale", selectedLocaleIndex, availableLocaleNames);
+
+            if (selectedLocaleIndex >= 0 && selectedLocaleIndex < availableLocaleNames.Length)
+            {
+                phraseProvider.m_selectedLocaleId = availableLocaleNames[selectedLocaleIndex];
+            }
+
             EditorGUI.indentLevel--;
             EditorGUILayout.EndToggleGroup();
 
