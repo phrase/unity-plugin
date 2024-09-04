@@ -94,13 +94,25 @@ namespace Phrase
 
         public async void FetchProjects()
         {
-            Projects = await Client.ListProjects();
+            // Initialize the Projects list to accumulate all fetched projects
+            Projects = new List<Project>();
+
+            int page = 1;
+            List<Project> currentBatch;
+
+            do
+            {
+                currentBatch = await Client.ListProjects(page);
+                Projects.AddRange(currentBatch);
+                page++;
+            } while (currentBatch.Count == 100);  // Continue if a full batch is returned
+
             FetchLocales();
         }
 
         public async void FetchLocales()
         {
-            if (m_selectedProjectId == null)
+            if (m_selectedProjectId == null || m_selectedProjectId == "")
             {
                 return;
             }
@@ -333,29 +345,31 @@ namespace Phrase
 
         private PhraseProvider phraseProvider => target as PhraseProvider;
 
+        private string searchQuery = "";
+        private string localeSearchQuery = string.Empty;
+    
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
 
             ShowConnectionSection();
-
-            string[] projectNames = phraseProvider.Projects.Select(p => p.name).ToArray();
-            int selectedProjectIndex = phraseProvider.Projects.FindIndex(p => p.id == phraseProvider.m_selectedProjectId);
-
-            int selectedProjectIndexNew = EditorGUILayout.Popup("Project", selectedProjectIndex, projectNames);
-            if (selectedProjectIndexNew != selectedProjectIndex)
-            {
-                selectedProjectIndex = selectedProjectIndexNew;
-                phraseProvider.m_selectedProjectId = phraseProvider.Projects[selectedProjectIndex].id;
-                phraseProvider.FetchLocales();
-            }
-
+            ShowProjectSection();
             ShowLocaleMismatchSection();
-
             ShowConnectedTablesSection();
-
             ShowPushPullSection();
 
+            serializedObject.ApplyModifiedProperties();
+        }
+
+        private string selectedProjectName;
+
+        private string TruncateWithEllipsis(string input, int maxLength)
+        {
+            if (string.IsNullOrEmpty(input) || input.Length <= maxLength)
+            {
+                return input;
+            }
+            return input.Substring(0, maxLength) + "...";
         }
 
         private void ShowConnectionSection() {
@@ -400,6 +414,50 @@ namespace Phrase
                 EditorGUILayout.EndToggleGroup();
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
+        }
+
+        private void ShowProjectSection() {
+            var allProjects = phraseProvider.Projects;
+            var filteredProjects = allProjects.ToArray();
+
+            // Only show Project-Filter if there are more than 10 projects
+            if (allProjects.Count > 10)
+            {
+                EditorGUILayout.BeginHorizontal();
+                searchQuery = EditorGUILayout.TextField("Filter by Projectname", searchQuery);
+                // Filter projects based on the search query
+                filteredProjects = allProjects
+                    .Where(p => string.IsNullOrEmpty(searchQuery) || p.name.IndexOf(searchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    .ToArray();
+                EditorGUILayout.LabelField($"{filteredProjects.Length}/{phraseProvider.Projects.Count}", GUILayout.Width(65));
+                EditorGUILayout.EndHorizontal();
+            }
+
+            // Truncate project names more aggressively to control popup width
+            string[] projectNames = filteredProjects
+                .Select(p => TruncateWithEllipsis(p.name, 30))
+                .ToArray();
+
+            int selectedProjectIndex = System.Array.IndexOf(filteredProjects, phraseProvider.Projects.FirstOrDefault(p => p.id == phraseProvider.m_selectedProjectId));
+
+            // Ensure valid index
+            if (selectedProjectIndex == -1 && filteredProjects.Length > 0)
+            {
+                selectedProjectIndex = 0; // Default to first project if no selection matches
+            }
+
+            selectedProjectIndex = EditorGUILayout.Popup("Select Project", selectedProjectIndex, projectNames);
+
+            if (selectedProjectIndex >= 0 && selectedProjectIndex < filteredProjects.Length)
+            {
+                var selectedProject = filteredProjects[selectedProjectIndex];
+                if (selectedProjectName != selectedProject.name)
+                {
+                    selectedProjectName = selectedProject.name;
+                    phraseProvider.m_selectedProjectId = selectedProject.id;
+                    phraseProvider.FetchLocales();
+                }
+            }
         }
 
         private void ShowLocaleMismatchSection() {
@@ -565,52 +623,83 @@ namespace Phrase
         private void ShowPushPullSection() {
             using (new EditorGUI.DisabledScope(!phraseProvider.IsProjectSelected))
             {
-                // Push locale selection
-                phraseProvider.m_pushOnlySelected = EditorGUILayout.BeginToggleGroup("Push only selected locale:", phraseProvider.m_pushOnlySelected);
-                EditorGUI.indentLevel++;
-                string[] availableLocaleNames = phraseProvider.AvailableLocalesRemotely().Select(l => l.Identifier.Code).ToArray();
-                int selectedLocaleIndex = phraseProvider.AvailableLocalesRemotely().FindIndex(l => l.Identifier.Code == phraseProvider.m_selectedLocaleId);
-                int selectedLocaleIndexNew = EditorGUILayout.Popup("Locale", selectedLocaleIndex, availableLocaleNames);
-                if (selectedLocaleIndexNew != selectedLocaleIndex)
-                {
-                    selectedLocaleIndex = selectedLocaleIndexNew;
-                    phraseProvider.m_selectedLocaleId = phraseProvider.AvailableLocalesRemotely()[selectedLocaleIndex].Identifier.Code;
-                }
-                EditorGUI.indentLevel--;
-                EditorGUILayout.EndToggleGroup();
+               ShowPushSection();
+               ShowPullSection();
+            }
+        }
 
-                string pushButtonLabel = phraseProvider.m_pushOnlySelected ? "Push selected" : "Push all";
-                if (GUILayout.Button(pushButtonLabel))
-                {
-                    phraseProvider.PushAll();
-                }
+        private void ShowPushSection() {
+            phraseProvider.m_pushOnlySelected = EditorGUILayout.BeginToggleGroup("Push only selected locale:", phraseProvider.m_pushOnlySelected);
+            EditorGUI.indentLevel++;
+            // Get the list of available locales
+            var allLocales = phraseProvider.AvailableLocalesRemotely();
+            
+            // Determine if the search field should be displayed
+            if (allLocales.Count > 10)
+            {
+                localeSearchQuery = EditorGUILayout.TextField("Filter by Locale", localeSearchQuery);
+            }
+            else
+            {
+                localeSearchQuery = string.Empty;
+            }
 
-                phraseProvider.m_pullOnlySelected = EditorGUILayout.BeginToggleGroup("Pull only selected locales:", phraseProvider.m_pullOnlySelected);
-                EditorGUI.indentLevel++;
-                foreach (var locale in phraseProvider.AvailableLocalesLocally())
+            var filteredLocales = allLocales
+                .Where(l => string.IsNullOrEmpty(localeSearchQuery) || l.Identifier.Code.IndexOf(localeSearchQuery, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToArray();
+
+            string[] availableLocaleNames = filteredLocales.Select(l => l.Identifier.Code).ToArray();
+            int selectedLocaleIndex = System.Array.IndexOf(availableLocaleNames, phraseProvider.m_selectedLocaleId);
+
+            // Ensure valid index
+            if (selectedLocaleIndex == -1 && availableLocaleNames.Length > 0)
+            {
+                selectedLocaleIndex = 0; 
+            }
+
+            selectedLocaleIndex = EditorGUILayout.Popup("Locale", selectedLocaleIndex, availableLocaleNames);
+
+            if (selectedLocaleIndex >= 0 && selectedLocaleIndex < availableLocaleNames.Length)
+            {
+                phraseProvider.m_selectedLocaleId = availableLocaleNames[selectedLocaleIndex];
+            }
+
+            EditorGUI.indentLevel--;
+            EditorGUILayout.EndToggleGroup();
+
+            string pushButtonLabel = phraseProvider.m_pushOnlySelected ? "Push selected" : "Push all";
+            if (GUILayout.Button(pushButtonLabel))
+            {
+                phraseProvider.PushAll();
+            }
+        }
+
+        private void ShowPullSection() {
+            phraseProvider.m_pullOnlySelected = EditorGUILayout.BeginToggleGroup("Pull only selected locales:", phraseProvider.m_pullOnlySelected);
+            EditorGUI.indentLevel++;
+            foreach (var locale in phraseProvider.AvailableLocalesLocally())
+            {
+                bool selectedState = phraseProvider.LocaleIdsToPull.Contains(locale.id);
+                bool newSelectedState = EditorGUILayout.ToggleLeft(locale.ToString(), selectedState);
+                if (newSelectedState != selectedState)
                 {
-                    bool selectedState = phraseProvider.LocaleIdsToPull.Contains(locale.id);
-                    bool newSelectedState = EditorGUILayout.ToggleLeft(locale.ToString(), selectedState);
-                    if (newSelectedState != selectedState)
+                    if (newSelectedState)
                     {
-                        if (newSelectedState)
-                        {
-                            phraseProvider.LocaleIdsToPull.Add(locale.id);
-                        }
-                        else
-                        {
-                            phraseProvider.LocaleIdsToPull.Remove(locale.id);
-                        }
+                        phraseProvider.LocaleIdsToPull.Add(locale.id);
+                    }
+                    else
+                    {
+                        phraseProvider.LocaleIdsToPull.Remove(locale.id);
                     }
                 }
-                EditorGUI.indentLevel--;
+            }
+            EditorGUI.indentLevel--;
 
-                EditorGUILayout.EndToggleGroup();
-                string pullButtonLabel = phraseProvider.m_pullOnlySelected ? "Pull selected" : "Pull all";
-                if (GUILayout.Button(pullButtonLabel))
-                {
-                    phraseProvider.PullAll();
-                }
+            EditorGUILayout.EndToggleGroup();
+            string pullButtonLabel = phraseProvider.m_pullOnlySelected ? "Pull selected" : "Pull all";
+            if (GUILayout.Button(pullButtonLabel))
+            {
+                phraseProvider.PullAll();
             }
         }
 
