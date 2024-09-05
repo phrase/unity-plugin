@@ -88,13 +88,20 @@ namespace Phrase
       bool isConnected = SharedTableData != null && Provider != null && KeyName != null;
       if (isConnected)
       {
-        EditorGUILayout.LabelField("Key Name", KeyName);
         if (Metadata == null)
         {
           SharedTableData.GetEntry(KeyName).Metadata.AddMetadata(new PhraseMetadata());
         }
         Metadata.Description = EditorGUILayout.TextField("Description", Metadata.Description);
         Metadata.MaxLength = EditorGUILayout.IntField("Max Length (0 for no limit)", Metadata.MaxLength);
+        if (Metadata.KeyId != null)
+        {
+          // EditorGUILayout.LabelField("Phrase Key ID", Metadata.KeyId);
+          if (EditorGUILayout.LinkButton(KeyName)) {
+            Application.OpenURL(Provider.KeyUrl(Metadata.KeyId));
+          }
+        }
+
         EditorGUILayout.LabelField("Screenshot ID", Context.ScreenshotId);
         if (GUILayout.Button("Upload Screenshot"))
         {

@@ -48,6 +48,9 @@ namespace Phrase
         public List<string> LocaleIdsToPull { get; private set; } = new List<string>();
 
         [SerializeField]
+        public string m_selectedAccountId = null;
+
+        [SerializeField]
         public string m_selectedProjectId = null;
 
         [SerializeField]
@@ -352,6 +355,12 @@ namespace Phrase
             }
             context.ScreenshotId = screenshot.id;
         }
+
+        public string KeyUrl(string keyId)
+        {
+            return $"http://localhost:3000/editor/v4/accounts/{m_selectedAccountId}/projects/{m_selectedProjectId}?keyId={keyId}";
+            // return $"https://app.phrase-qa.com/editor/v4/accounts/{m_selectedAccountId}/projects/{m_selectedProjectId}?search=keyNameQuery%253A{keyName}";
+        }
     }
 
     [CustomEditor(typeof(PhraseProvider))]
@@ -374,7 +383,7 @@ namespace Phrase
 
         private string searchQuery = "";
         private string localeSearchQuery = string.Empty;
-    
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
@@ -482,6 +491,7 @@ namespace Phrase
                 {
                     selectedProjectName = selectedProject.name;
                     phraseProvider.m_selectedProjectId = selectedProject.id;
+                    phraseProvider.m_selectedAccountId = selectedProject.account.id;
                     phraseProvider.FetchLocales();
                 }
             }
@@ -660,7 +670,7 @@ namespace Phrase
             EditorGUI.indentLevel++;
             // Get the list of available locales
             var allLocales = phraseProvider.AvailableLocalesRemotely();
-            
+
             // Determine if the search field should be displayed
             if (allLocales.Count > 10)
             {
@@ -681,7 +691,7 @@ namespace Phrase
             // Ensure valid index
             if (selectedLocaleIndex == -1 && availableLocaleNames.Length > 0)
             {
-                selectedLocaleIndex = 0; 
+                selectedLocaleIndex = 0;
             }
 
             selectedLocaleIndex = EditorGUILayout.Popup("Locale", selectedLocaleIndex, availableLocaleNames);
