@@ -97,9 +97,14 @@ namespace Phrase
         public bool IsProjectSelected => Projects.Count > 0 && m_selectedProjectId != null;
 
         public bool HasLocaleMismatch => MissingLocalesLocally().Count > 0 || MissingLocalesRemotely().Count > 0;
+        public bool IsLoadingProjects { get; private set; } = false;
+        public bool IsLoadingLocales { get; private set; } = false;
+        public bool IsPushingLocales { get; private set; } = false;
+        public bool IsPullingLocales { get; private set; } = false;
 
         public async void FetchProjects()
         {
+            IsLoadingProjects = true;
             // Initialize the Projects list to accumulate all fetched projects
             Projects = new List<Project>();
 
@@ -113,11 +118,13 @@ namespace Phrase
                 page++;
             } while (currentBatch.Count == 100);  // Continue if a full batch is returned
 
-            FetchLocales();
+            IsLoadingProjects = false;
+            FetchLocales();            
         }
-
+        
         public async void FetchLocales()
         {
+            IsLoadingLocales = true;
             if (m_selectedProjectId == null || m_selectedProjectId == "")
             {
                 return;
@@ -125,6 +132,7 @@ namespace Phrase
             Locales = await Client.ListLocales(m_selectedProjectId);
             LocalizationSettings.InitializationOperation.WaitForCompletion();
             LocaleIdsToPull.Clear();
+            IsLoadingLocales = false;
         }
 
         public static List<StringTableCollection> AllStringTableCollections()
@@ -208,6 +216,7 @@ namespace Phrase
 
         public void PushAll()
         {
+            IsPushingLocales = true;
             int count = 0;
             List<StringTableCollection> collections = ConnectedStringTableCollections();
             foreach (StringTableCollection collection in collections)
@@ -234,22 +243,40 @@ namespace Phrase
                 }
             }
             EditorUtility.DisplayDialog("Push complete", $"{count} locale(s) from {collections.Count} table collection(s) pushed.", "OK");
+            IsPushingLocales = false;
         }
 
-        public async void PullAll()
+        public async Task PullAll()
         {
+            IsPullingLocales = true;
             int totalLocaleCount = 0;
             int totalCount = 0;
+            int progress = 0;
+
+            EditorUtility.DisplayCancelableProgressBar("Pulling Locales", "Starting locale pull...", 0f);
+
             foreach (StringTableCollection collection in ConnectedStringTableCollections())
             {
                 totalLocaleCount += await Pull(collection);
                 totalCount++;
+
+                // Update progress
+                progress = (totalCount * 100) / ConnectedStringTableCollections().Count;
+                EditorUtility.DisplayCancelableProgressBar("Pulling Locales", $"Pulling locales... ({progress}%)", progress / 100f);
             }
+
+            // Clear the progress bar when done
+            EditorUtility.ClearProgressBar();
+
+            // Show completion dialog
             EditorUtility.DisplayDialog("Pull complete", $"{totalLocaleCount} locale(s) in {totalCount} table collection(s) imported.", "OK");
+
+            IsPullingLocales = false;
         }
 
         public int Push(StringTableCollection collection, bool displayDialog = false)
         {
+            IsPushingLocales = true;
             int count = 0;
             foreach (var stringTable in collection.StringTables)
             {
@@ -264,6 +291,7 @@ namespace Phrase
             {
                 EditorUtility.DisplayDialog("Push complete", $"{count} locale(s) pushed.", "OK");
             }
+            IsPushingLocales = false;
             return count;
         }
 
@@ -286,6 +314,7 @@ namespace Phrase
 
         public void Push(StringTableCollection collection, Locale locale, bool displayDialog = false)
         {
+            IsPushingLocales = true;
             var matchingStringTable = collection.StringTables.FirstOrDefault(st => st.LocaleIdentifier.Code == locale.code);
             if (matchingStringTable == null)
             {
@@ -304,19 +333,25 @@ namespace Phrase
             {
                 EditorUtility.DisplayDialog("Push complete", $"Locale {locale.code} pushed.", "OK");
             }
+            IsPushingLocales = false;
         }
 
         public async Task<int> Pull(StringTableCollection collection, bool displayDialog = false)
         {
             int count = 0;
-            foreach(var stringTable in collection.StringTables) {
-                // find the locale
+            IsPullingLocales = true;
+
+            foreach (var stringTable in collection.StringTables)
+            {
+                // Find the locale
                 var selectedLocale = Locales.FirstOrDefault(l => l.code == stringTable.LocaleIdentifier.Code);
-                if (selectedLocale != null) {
+                if (selectedLocale != null)
+                {
                     if (m_pullOnlySelected && !LocaleIdsToPull.Contains(selectedLocale.id))
                     {
                         continue;
                     }
+
                     Log("Downloading locale " + selectedLocale.code);
                     var csvContent = await Client.DownloadLocale(m_selectedProjectId, selectedLocale.id);
                     using (var reader = new StringReader(csvContent))
@@ -331,10 +366,13 @@ namespace Phrase
                     Log("No Phrase locale found for string table " + stringTable.LocaleIdentifier.Code);
                 }
             }
+
             if (displayDialog)
             {
                 EditorUtility.DisplayDialog("Pull complete", $"{count} locale(s) imported.", "OK");
             }
+
+            IsPullingLocales = false;
             return count;
         }
 
@@ -374,16 +412,36 @@ namespace Phrase
 
         private string searchQuery = "";
         private string localeSearchQuery = string.Empty;
+        private bool isLoadingProjects = false;
+        private bool isLoadingLocales = false;
+        private bool isPushingLocales = false;
+        private bool isPullingLocales = false;
+        private bool isLoading = false;
     
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-
+            var phraseProvider = (PhraseProvider)target;
+            UpdateLoadingState();
+            
+            EditorGUI.BeginDisabledGroup(isLoading);
             ShowConnectionSection();
             ShowProjectSection();
             ShowLocaleMismatchSection();
             ShowConnectedTablesSection();
             ShowPushPullSection();
+
+            EditorGUI.EndDisabledGroup();
+            // EditorUtility.ClearProgressBar();
+
+            if (isLoading) {
+                 Repaint(); 
+                string message = GetLoadingMessage();
+                EditorGUILayout.HelpBox(message, MessageType.Info);
+                 Repaint(); 
+                // EditorUtility.DisplayProgressBar("Fetching Projects", "Loading projects from Phrase API...", 0.0f);
+                // EditorUtility.DisplayCancelableProgressBar("Fetching Projects", "Loading projects from Phrase API...", 0.0f);
+            }
 
             serializedObject.ApplyModifiedProperties();
         }
@@ -701,7 +759,8 @@ namespace Phrase
             }
         }
 
-        private void ShowPullSection() {
+        private void ShowPullSection()
+        {
             phraseProvider.m_pullOnlySelected = EditorGUILayout.BeginToggleGroup("Pull only selected locales:", phraseProvider.m_pullOnlySelected);
             EditorGUI.indentLevel++;
             foreach (var locale in phraseProvider.AvailableLocalesLocally())
@@ -726,8 +785,13 @@ namespace Phrase
             string pullButtonLabel = phraseProvider.m_pullOnlySelected ? "Pull selected" : "Pull all";
             if (GUILayout.Button(pullButtonLabel))
             {
-                phraseProvider.PullAll();
+                PullLocalesAsync();  // Call async version
             }
+        }
+
+        private async void PullLocalesAsync()
+        {
+            await phraseProvider.PullAll();  // Use async method to keep UI responsive
         }
 
         /// <summary>
@@ -754,6 +818,36 @@ namespace Phrase
                     collection.RemoveExtension(extension);
                 }
             }
+        }
+
+        private void UpdateLoadingState()
+        {
+            isLoadingProjects = phraseProvider.IsLoadingProjects;
+            isLoadingLocales = phraseProvider.IsLoadingLocales;
+            isPushingLocales = phraseProvider.IsPushingLocales;
+            isPullingLocales = phraseProvider.IsPullingLocales;
+            isLoading = isLoadingProjects || isLoadingLocales || isPushingLocales || isPullingLocales;
+        }
+
+        private string GetLoadingMessage()
+        {
+            if (isLoadingProjects)
+            {
+                return "Loading projects...";
+            }
+            if (isLoadingLocales)
+            {
+                return "Loading locales...";
+            }
+            if (isPushingLocales)
+            {
+                return "Pushing locales...";
+            }
+            if (isPullingLocales)
+            {
+                return "Pulling locales...";
+            }
+            return "";
         }
     }
 }
