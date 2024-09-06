@@ -14,6 +14,7 @@ using UnityEditor.Localization.Plugins.CSV.Columns;
 using UnityEngine.Localization.Settings;
 
 using static Phrase.PhraseClient;
+using System.Text.RegularExpressions;
 
 namespace Phrase
 {
@@ -341,7 +342,7 @@ namespace Phrase
             return count;
         }
 
-        public async void UploadScreenshot(string keyName, string path, PhraseKeyContext context)
+        public async void UploadScreenshot(string keyName, string path, PhraseMetadata metadata)
         {
             string name = keyName + "_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
             Screenshot screenshot = await Client.UploadScreenshot(m_selectedProjectId, name, path);
@@ -353,13 +354,31 @@ namespace Phrase
                     Client.CreateScreenshotMarker(m_selectedProjectId, screenshot.id, key.id);
                 }
             }
-            context.ScreenshotId = screenshot.id;
+            metadata.ScreenshotId = screenshot.id;
         }
 
         public string KeyUrl(string keyId)
         {
-            return $"http://localhost:3000/editor/v4/accounts/{m_selectedAccountId}/projects/{m_selectedProjectId}?keyId={keyId}";
-            // return $"https://app.phrase-qa.com/editor/v4/accounts/{m_selectedAccountId}/projects/{m_selectedProjectId}?search=keyNameQuery%253A{keyName}";
+            string host;
+            switch (m_Environment) {
+                case "EU":
+                    host = "https://app.phrase.com";
+                    break;
+                case "US":
+                    host = "https://us.app.phrase.com";
+                    break;
+                default:
+                    if (Regex.IsMatch(m_ApiUrl, "localhost:3000"))
+                    {
+                        host = "http://localhost:3000";
+                    }
+                    else
+                    {
+                        host = "https://app.phrase-qa.com";
+                    }
+                    break;
+            }
+            return $"{host}/editor/v4/accounts/{m_selectedAccountId}/projects/{m_selectedProjectId}?keyId={keyId}";
         }
     }
 

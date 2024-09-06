@@ -69,7 +69,7 @@ namespace Phrase
 
     private PhraseMetadata Metadata => SharedTableData?.GetEntry(KeyName)?.Metadata.GetMetadata<PhraseMetadata>();
 
-    IEnumerator UploadScreenshot(string keyName, PhraseKeyContext context)
+    IEnumerator UploadScreenshot(string keyName, PhraseMetadata metadata)
     {
       string screenshotPath = "Temp/phrase_screenshot.png";
       System.IO.File.Delete(screenshotPath);
@@ -77,7 +77,7 @@ namespace Phrase
       ScreenCapture.CaptureScreenshot(screenshotPath);
 
       yield return new WaitForEndOfFrame();
-      Provider.UploadScreenshot(keyName, screenshotPath, context);
+      Provider.UploadScreenshot(keyName, screenshotPath, metadata);
       System.IO.File.Delete(screenshotPath);
 
       EditorUtility.DisplayDialog("Upload Screenshot", $"Screenshot uploaded for {KeyName}", "OK");
@@ -92,20 +92,18 @@ namespace Phrase
         {
           SharedTableData.GetEntry(KeyName).Metadata.AddMetadata(new PhraseMetadata());
         }
-        Metadata.Description = EditorGUILayout.TextField("Description", Metadata.Description);
-        Metadata.MaxLength = EditorGUILayout.IntField("Max Length (0 for no limit)", Metadata.MaxLength);
+        EditorGUILayout.LabelField("Phrase Key", KeyName);
         if (Metadata.KeyId != null)
         {
-          // EditorGUILayout.LabelField("Phrase Key ID", Metadata.KeyId);
-          if (EditorGUILayout.LinkButton(KeyName)) {
+          if (EditorGUILayout.LinkButton("Open in Phrase")) {
             Application.OpenURL(Provider.KeyUrl(Metadata.KeyId));
           }
         }
-
-        EditorGUILayout.LabelField("Screenshot ID", Context.ScreenshotId);
+        Metadata.Description = EditorGUILayout.TextField("Description", Metadata.Description);
+        Metadata.MaxLength = EditorGUILayout.IntField("Max Length (0 for no limit)", Metadata.MaxLength);
         if (GUILayout.Button("Upload Screenshot"))
         {
-          EditorCoroutineUtility.StartCoroutine(UploadScreenshot(KeyName, Context), this);
+          EditorCoroutineUtility.StartCoroutine(UploadScreenshot(KeyName, Metadata), this);
         }
       }
       else
