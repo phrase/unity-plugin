@@ -130,15 +130,21 @@ namespace Phrase
             metadata = new PhraseMetadata();
             sharedTableData.GetEntry(keyName).Metadata.AddMetadata(metadata);
           }
+          EditorGUILayout.BeginHorizontal();
           EditorGUILayout.LabelField("Phrase Key", keyName);
           if (metadata.KeyId != null)
           {
-            if (EditorGUILayout.LinkButton("Open in Phrase")) {
+            if (GUILayout.Button("Copy", GUILayout.Width(50)))
+            {
+              EditorGUIUtility.systemCopyBuffer = keyName;
+            }
+            if (GUILayout.Button("Open in Phrase", GUILayout.Width(100))) {
               Application.OpenURL(provider.KeyUrl(metadata.KeyId));
             }
           }
+          EditorGUILayout.EndHorizontal();
           metadata.Description = EditorGUILayout.TextField("Description", metadata.Description);
-          metadata.MaxLength = EditorGUILayout.IntField("Max Length (0 for no limit)", metadata.MaxLength);
+          metadata.MaxLength = EditorGUILayout.IntField(new GUIContent("Max Length", "set 0 for no limit"), metadata.MaxLength);
           // TODO: extract screenshot upload to apply to multiple keys
           if (GUILayout.Button("Upload Screenshot"))
           {
