@@ -158,13 +158,13 @@ namespace Phrase
             {
                 { "locale_id", localeID },
                 { "file_format", "csv" },
-                { "header_content_row", "true" },
                 { "update_descriptions", "true" },
                 { "autotranslate", autoTranslate.ToString() },
                 { $"locale_mapping[{localeCode}]", "2" },
                 { "format_options[key_index]", "1" },
                 { "format_options[comment_index]", "3" },
-                { "format_options[max_characters_allowed_column]", "4" }
+                { "format_options[max_characters_allowed_column]", "4" },
+                { "format_options[header_content_row]", "true" }
             };
 
             await HttpUploadFile(url, path, "file", "text/plain", nvc);
