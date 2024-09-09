@@ -81,10 +81,18 @@ namespace Phrase
         }
 
         [Serializable]
+        public class Account
+        {
+            public string id;
+            public string name;
+        }
+
+        [Serializable]
         public class Project
         {
             public string id;
             public string name;
+            public Account account;
         }
 
         [Serializable]
@@ -111,7 +119,7 @@ namespace Phrase
 
         public async Task<string> DownloadLocale(string projectID, string localeID)
         {
-            string url = string.Format("projects/{0}/locales/{1}/download?file_format=csv&format_options%5Bexport_max_characters_allowed%5D=true&include_empty_translations=true", projectID, localeID);
+            string url = string.Format("projects/{0}/locales/{1}/download?file_format=csv&format_options%5Bexport_max_characters_allowed%5D=true&format_options%5Bexport_key_id%5D=true&include_empty_translations=true", projectID, localeID);
             using HttpResponseMessage response = await Client.GetAsync(url);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();
