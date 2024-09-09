@@ -9,13 +9,15 @@ namespace Phrase
 {
     public class PhraseCsvColumns : CsvColumns
     {
-        int m_DescriptionIndex, m_MaxCharsIndex;
+        int m_KeyIdIndex, m_DescriptionIndex, m_MaxCharsIndex;
 
+        private const string k_KeyId = "key_id";
         private const string k_Description = "comment";
         private const string k_MaxChars = "max_characters_allowed";
 
         public override void ReadBegin(StringTableCollection collection, CsvReader reader)
         {
+            m_KeyIdIndex = reader.GetFieldIndex(k_KeyId, isTryGet: true);
             m_DescriptionIndex = reader.GetFieldIndex(k_Description, isTryGet: true);
             m_MaxCharsIndex = reader.GetFieldIndex(k_MaxChars, isTryGet: true);
         }
@@ -30,11 +32,14 @@ namespace Phrase
                 keyEntry.Metadata.AddMetadata(metadata);
             }
 
+            if (m_KeyIdIndex != -1)
+            {
+                metadata.KeyId = reader.GetField(m_KeyIdIndex);
+            }
             if (m_DescriptionIndex != -1)
             {
                 metadata.Description = reader.GetField(m_DescriptionIndex);
             }
-
             if (m_MaxCharsIndex != -1)
             {
                 if (reader.TryGetField<int>(m_MaxCharsIndex, out var maxChars))

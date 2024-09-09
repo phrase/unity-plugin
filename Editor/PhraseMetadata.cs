@@ -8,6 +8,11 @@ namespace Phrase
   public class PhraseMetadata : IMetadata
   {
     public string Description;
+
     public int MaxLength;
+
+    public string KeyId;
+
+    public string ScreenshotId;
   }
 }

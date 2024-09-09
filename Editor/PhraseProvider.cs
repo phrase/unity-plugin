@@ -14,6 +14,7 @@ using UnityEditor.Localization.Plugins.CSV.Columns;
 using UnityEngine.Localization.Settings;
 
 using static Phrase.PhraseClient;
+using System.Text.RegularExpressions;
 
 namespace Phrase
 {
@@ -48,6 +49,9 @@ namespace Phrase
         public List<string> LocaleIdsToPull { get; private set; } = new List<string>();
 
         [SerializeField]
+        public string m_selectedAccountId = null;
+
+        [SerializeField]
         public string m_selectedProjectId = null;
 
         [SerializeField]
@@ -62,6 +66,13 @@ namespace Phrase
         public string Token => m_UseOauth ? m_OauthToken : m_ApiKey;
 
         private PhraseClient Client => new PhraseClient(this);
+
+        private string StringsAppHost => m_Environment switch
+        {
+            "EU" => "https://app.phrase.com",
+            "US" => "https://us.app.phrase.com",
+            _ => Regex.IsMatch(m_ApiUrl, "localhost:3000") ? "http://localhost:3000" : "https://app.phrase-qa.com",
+        };
 
         public void Log(string message)
         {
@@ -338,7 +349,7 @@ namespace Phrase
             return count;
         }
 
-        public async void UploadScreenshot(string keyName, string path, PhraseKeyContext context)
+        public async void UploadScreenshot(string keyName, string path, PhraseMetadata metadata)
         {
             string name = keyName + "_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
             Screenshot screenshot = await Client.UploadScreenshot(m_selectedProjectId, name, path);
@@ -350,7 +361,12 @@ namespace Phrase
                     Client.CreateScreenshotMarker(m_selectedProjectId, screenshot.id, key.id);
                 }
             }
-            context.ScreenshotId = screenshot.id;
+            metadata.ScreenshotId = screenshot.id;
+        }
+
+        public string KeyUrl(string keyId)
+        {
+            return $"{StringsAppHost}/editor/v4/accounts/{m_selectedAccountId}/projects/{m_selectedProjectId}?keyId={keyId}";
         }
     }
 
@@ -374,7 +390,7 @@ namespace Phrase
 
         private string searchQuery = "";
         private string localeSearchQuery = string.Empty;
-    
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
@@ -482,6 +498,7 @@ namespace Phrase
                 {
                     selectedProjectName = selectedProject.name;
                     phraseProvider.m_selectedProjectId = selectedProject.id;
+                    phraseProvider.m_selectedAccountId = selectedProject.account.id;
                     phraseProvider.FetchLocales();
                 }
             }
@@ -660,7 +677,7 @@ namespace Phrase
             EditorGUI.indentLevel++;
             // Get the list of available locales
             var allLocales = phraseProvider.AvailableLocalesRemotely();
-            
+
             // Determine if the search field should be displayed
             if (allLocales.Count > 10)
             {
@@ -681,7 +698,7 @@ namespace Phrase
             // Ensure valid index
             if (selectedLocaleIndex == -1 && availableLocaleNames.Length > 0)
             {
-                selectedLocaleIndex = 0; 
+                selectedLocaleIndex = 0;
             }
 
             selectedLocaleIndex = EditorGUILayout.Popup("Locale", selectedLocaleIndex, availableLocaleNames);
