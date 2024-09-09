@@ -118,7 +118,7 @@ namespace Phrase
         }
 
 
-        public async void ListLocales(string projectID, List<Locale> locales)
+        public async void UpdateLocalesList(string projectID, List<Locale> locales)
         {
             string url = string.Format("projects/{0}/locales", projectID);
             using HttpResponseMessage response = await Client.GetAsync(url);
@@ -136,7 +136,7 @@ namespace Phrase
             response.EnsureSuccessStatusCode();
         }
 
-        public async void ListProjectsAsync(List<Project> projects)
+        public async void UpdateProjectsList(List<Project> projects)
         {
             projects.Clear();
             int page = 1;

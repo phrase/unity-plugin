@@ -109,7 +109,7 @@ namespace Phrase
             IsLoadingProjects = true;
             yield return new WaitForEndOfFrame();
 
-            Client.ListProjectsAsync(Projects);
+            Client.UpdateProjectsList(Projects);
             IsLoadingProjects = false;
         }
 
@@ -127,7 +127,7 @@ namespace Phrase
             }
             IsLoadingLocales = true;
             yield return new WaitForEndOfFrame();
-            Client.ListLocales(m_selectedProjectId, Locales);
+            Client.UpdateLocalesList(m_selectedProjectId, Locales);
             LocalizationSettings.InitializationOperation.WaitForCompletion();
             LocaleIdsToPull.Clear();
             IsLoadingLocales = false;
