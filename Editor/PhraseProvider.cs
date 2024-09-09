@@ -67,6 +67,13 @@ namespace Phrase
 
         private PhraseClient Client => new PhraseClient(this);
 
+        private string StringsAppHost => m_Environment switch
+        {
+            "EU" => "https://app.phrase.com",
+            "US" => "https://us.app.phrase.com",
+            _ => Regex.IsMatch(m_ApiUrl, "localhost:3000") ? "http://localhost:3000" : "https://app.phrase-qa.com",
+        };
+
         public void Log(string message)
         {
             if (m_Environment == "Custom")
@@ -359,26 +366,7 @@ namespace Phrase
 
         public string KeyUrl(string keyId)
         {
-            string host;
-            switch (m_Environment) {
-                case "EU":
-                    host = "https://app.phrase.com";
-                    break;
-                case "US":
-                    host = "https://us.app.phrase.com";
-                    break;
-                default:
-                    if (Regex.IsMatch(m_ApiUrl, "localhost:3000"))
-                    {
-                        host = "http://localhost:3000";
-                    }
-                    else
-                    {
-                        host = "https://app.phrase-qa.com";
-                    }
-                    break;
-            }
-            return $"{host}/editor/v4/accounts/{m_selectedAccountId}/projects/{m_selectedProjectId}?keyId={keyId}";
+            return $"{StringsAppHost}/editor/v4/accounts/{m_selectedAccountId}/projects/{m_selectedProjectId}?keyId={keyId}";
         }
     }
 
