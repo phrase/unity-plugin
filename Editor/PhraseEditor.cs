@@ -96,7 +96,7 @@ namespace Phrase
       return null;
     }
 
-    private IEnumerator UploadScreenshot(string keyName, PhraseMetadata metadata, PhraseProvider provider)
+    private IEnumerator UploadScreenshots(GameObject[] gameObjects)
     {
       string screenshotPath = "Temp/phrase_screenshot.png";
       System.IO.File.Delete(screenshotPath);
@@ -104,10 +104,20 @@ namespace Phrase
       ScreenCapture.CaptureScreenshot(screenshotPath);
 
       yield return new WaitForEndOfFrame();
-      provider.UploadScreenshot(keyName, screenshotPath, metadata);
+
+      foreach (var gameObject in gameObjects)
+      {
+        SharedTableData sharedTableData = SharedTableData(gameObject);
+        PhraseMetadata metadata = phraseMetadata(gameObject);
+        PhraseProvider provider = Provider(stringTableCollection(sharedTableData));
+        string keyName = KeyName(gameObject);
+        Debug.Log($"Uploading screenshot for key \"{keyName}\"");
+
+        provider.UploadScreenshot(keyName, screenshotPath, metadata);
+      }
       System.IO.File.Delete(screenshotPath);
 
-      EditorUtility.DisplayDialog("Upload Screenshot", $"Screenshot uploaded for key \"{keyName}\"", "OK");
+      // EditorUtility.DisplayDialog("Upload Screenshot", $"Screenshot uploaded for key \"{keyName}\"", "OK");
     }
 
     private Vector2 scrollPosition;
@@ -151,14 +161,16 @@ namespace Phrase
           EditorGUILayout.EndHorizontal();
           metadata.Description = EditorGUILayout.TextField("Description", metadata.Description);
           metadata.MaxLength = EditorGUILayout.IntField(new GUIContent("Max Length", "set 0 for no limit"), metadata.MaxLength);
-          // TODO: extract screenshot upload to apply to multiple keys
-          if (GUILayout.Button("Upload Screenshot"))
-          {
-            EditorCoroutineUtility.StartCoroutine(UploadScreenshot(keyName, metadata, provider), this);
-          }
+
           EditorGUI.indentLevel--;
         }
       }
+
+      if (GUILayout.Button("Upload Screenshot"))
+      {
+        EditorCoroutineUtility.StartCoroutine(UploadScreenshots(translatableObjects), this);
+      }
+
       EditorGUILayout.EndScrollView();
     }
 
