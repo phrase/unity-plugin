@@ -11,7 +11,9 @@ namespace Phrase
     {
         private SerializedProperty m_provider;
 
-        private SerializedProperty m_keyPrefix;
+        private SerializedProperty m_identifier;
+
+        private SerializedProperty m_identifierType;
 
         private PhraseProvider provider => m_provider.objectReferenceValue as PhraseProvider;
 
@@ -28,11 +30,14 @@ namespace Phrase
             EditorGUI.LabelField(position, EditorGUIUtility.TrTextContent("Phrase", icon), EditorStyles.boldLabel);
             position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
 
-            m_keyPrefix = property.FindPropertyRelative("m_keyPrefix");
+            m_identifier = property.FindPropertyRelative("m_identifier");
+            m_identifierType = property.FindPropertyRelative("m_identifierType");
             m_provider = property.FindPropertyRelative("m_provider");
             EditorGUI.PropertyField(position, m_provider);
             position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
-            EditorGUI.PropertyField(position, m_keyPrefix);
+            EditorGUI.PropertyField(position, m_identifierType);
+            position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
+            EditorGUI.PropertyField(position, m_identifier);
             position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
 
             if (m_provider.objectReferenceValue != null)
