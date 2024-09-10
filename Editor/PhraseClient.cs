@@ -126,13 +126,14 @@ namespace Phrase
         }
 
 
-        public async Task<List<Locale>> ListLocales(string projectID)
+        public async void UpdateLocalesList(string projectID, List<Locale> locales)
         {
             string url = string.Format("projects/{0}/locales", projectID);
             using HttpResponseMessage response = await Client.GetAsync(url);
             response.EnsureSuccessStatusCode();
             string jsonResponse = await response.Content.ReadAsStringAsync();
-            return JsonConvert.DeserializeObject<List<Locale>>(jsonResponse);
+            locales.Clear();
+            locales.AddRange(JsonConvert.DeserializeObject<List<Locale>>(jsonResponse));
         }
 
         public async void CreateLocale(string projectID, string localeCode, string localeName)
@@ -143,12 +144,22 @@ namespace Phrase
             response.EnsureSuccessStatusCode();
         }
 
-        public async Task<List<Project>> ListProjects(int page = 1)
+        public async void UpdateProjectsList(List<Project> projects)
         {
-            using HttpResponseMessage response = await Client.GetAsync($"projects?per_page=100&page={page}");
-            response.EnsureSuccessStatusCode();
-            string jsonResponse = await response.Content.ReadAsStringAsync();
-            return JsonConvert.DeserializeObject<List<Project>>(jsonResponse);
+            projects.Clear();
+            int page = 1;
+            List<Project> currentBatch;
+
+            do
+            {
+                using HttpResponseMessage response = await Client.GetAsync($"projects?per_page=100&page={page}");
+                response.EnsureSuccessStatusCode();
+                string jsonResponse = await response.Content.ReadAsStringAsync();
+                currentBatch = JsonConvert.DeserializeObject<List<Project>>(jsonResponse);
+                projects.AddRange(currentBatch);
+
+                page++;
+            } while (currentBatch.Count == 100);  // Continue if a full batch is returned
         }
 
         public async void UploadFile(string path, string projectID, string localeID, string localeCode, bool autoTranslate)

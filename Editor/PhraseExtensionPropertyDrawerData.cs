@@ -1,6 +1,7 @@
+using System.Collections.Generic;
+using Unity.EditorCoroutines.Editor;
 using UnityEditor;
 using UnityEditor.Localization;
-using UnityEditor.Localization.UI;
 using UnityEngine;
 
 namespace Phrase
@@ -8,10 +9,6 @@ namespace Phrase
     [CustomPropertyDrawer(typeof(PhraseExtension))]
     class TablePropertyDrawer : PropertyDrawer
     {
-        // public SerializedProperty m_provider;
-
-        // public PhraseProvider Provider => m_provider.objectReferenceValue as PhraseProvider;
-
         private SerializedProperty m_provider;
 
         private SerializedProperty m_keyPrefix;
@@ -20,7 +17,7 @@ namespace Phrase
 
         private Texture icon;
 
-        public override async void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             EditorGUI.BeginProperty(position, label, property);
             position.yMin += EditorGUIUtility.standardVerticalSpacing;
@@ -49,7 +46,7 @@ namespace Phrase
                     {
                         var extension = property.GetActualObjectForSerializedProperty<PhraseExtension>(fieldInfo);
                         var collection = extension.TargetCollection as StringTableCollection;
-                        provider.Push(collection, true);
+                        EditorCoroutineUtility.StartCoroutineOwnerless(provider.PushAll(new List<StringTableCollection> { collection }));
                     }
 
                     buttonPosition.x += buttonWidth + EditorGUIUtility.standardVerticalSpacing;
@@ -57,7 +54,7 @@ namespace Phrase
                     {
                         var extension = property.GetActualObjectForSerializedProperty<PhraseExtension>(fieldInfo);
                         var collection = extension.TargetCollection as StringTableCollection;
-                        await provider.Pull(collection, true);
+                        EditorCoroutineUtility.StartCoroutineOwnerless(provider.Pull(new List<StringTableCollection> { collection }));
                     }
                     position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
                 }
