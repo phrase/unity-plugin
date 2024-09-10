@@ -107,15 +107,21 @@ namespace Phrase
       provider.UploadScreenshot(keyName, screenshotPath, metadata);
       System.IO.File.Delete(screenshotPath);
 
-      EditorUtility.DisplayDialog("Upload Screenshot", $"Screenshot uploaded for {keyName}", "OK");
+      EditorUtility.DisplayDialog("Upload Screenshot", $"Screenshot uploaded for key \"{keyName}\"", "OK");
     }
 
     private Vector2 scrollPosition;
 
     public void OnGUI()
     {
+      var translatableObjects = Selection.gameObjects.Where(x => LocalizedString(x) != null).ToArray();
+      if (translatableObjects.Length == 0)
+      {
+        EditorGUILayout.HelpBox("Select a localized GameObject to edit its Phrase metadata.", MessageType.Info);
+        return;
+      }
       scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
-      foreach (var gameObject in Selection.gameObjects)
+      foreach (var gameObject in translatableObjects)
       {
         EditorGUILayout.LabelField(gameObject.name, EditorStyles.boldLabel);
         string keyName = KeyName(gameObject);
