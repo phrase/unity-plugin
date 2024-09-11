@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Linq;
 using Unity.EditorCoroutines.Editor;
@@ -126,6 +127,8 @@ namespace Phrase
     public void OnGUI()
     {
       var translatableObjects = Selection.gameObjects.Where(x => LocalizedString(x) != null).ToArray();
+      var hasScreenshots = false;
+
       if (translatableObjects.Length == 0)
       {
         EditorGUILayout.HelpBox("Select a localized GameObject to edit its Phrase metadata.", MessageType.Info);
@@ -158,6 +161,11 @@ namespace Phrase
             if (GUILayout.Button("Open in Phrase", GUILayout.Width(100))) {
               Application.OpenURL(provider.KeyUrl(metadata.KeyId));
             }
+
+            if (metadata.ScreenshotId != null)
+            {
+              hasScreenshots = true;
+            }
           }
           EditorGUILayout.EndHorizontal();
           metadata.Description = EditorGUILayout.TextField("Description", metadata.Description);
@@ -177,7 +185,8 @@ namespace Phrase
 
       GUILayout.Space(20);
 
-      if (GUILayout.Button("Upload Screenshot", GUILayout.Height(50)))
+      var screenshotButtonLabel = hasScreenshots ? "Update Screenshot" : "Upload Screenshot";
+      if (GUILayout.Button(screenshotButtonLabel, GUILayout.Height(50)))
       {
         EditorCoroutineUtility.StartCoroutine(UploadScreenshots(translatableObjects), this);
       }
