@@ -370,7 +370,7 @@ namespace Phrase
     }
 
     [CustomEditor(typeof(PhraseProvider))]
-    public class PhraseEditor : Editor
+    public class PhraseProviderEditor : Editor
     {
         bool m_showTables = false;
 
