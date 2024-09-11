@@ -100,6 +100,11 @@ namespace Phrase
         {
             public string id;
         }
+        
+        public class ScreenshotMarker
+        {
+            public string id;
+        }
 
         [Serializable]
         public class Key
@@ -193,17 +198,19 @@ namespace Phrase
             return JsonConvert.DeserializeObject<Screenshot>(responseString);
         }
 
-        public void CreateScreenshotMarker(string projectID, string screenshotID, string keyID)
+        public async Task<ScreenshotMarker> CreateScreenshotMarker(string projectID, string screenshotID, string keyID)
         {
             string url = string.Format("projects/{0}/screenshots/{1}/markers", projectID, screenshotID);
             var content = new StringContent(JsonConvert.SerializeObject(new { key_id = keyID }), Encoding.UTF8, "application/json");
             var response = Client.PostAsync(url, content).Result;
             response.EnsureSuccessStatusCode();
+
+            return JsonConvert.DeserializeObject<ScreenshotMarker>(await response.Content.ReadAsStringAsync());
         }
 
-        public void DeleteScreenshot(string projectID, string screenshotID)
+        public void DeleteScreenshotMarker(string projectID, string screenshotID, string markerID)
         {
-            string url = string.Format("projects/{0}/screenshots/{1}", projectID, screenshotID);
+            string url = string.Format("projects/{0}/screenshots/{1}/markers/{2}", projectID, screenshotID, markerID);
             Client.DeleteAsync(url);
         }
 

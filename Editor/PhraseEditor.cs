@@ -105,19 +105,16 @@ namespace Phrase
 
       yield return new WaitForEndOfFrame();
 
-      foreach (var gameObject in gameObjects)
-      {
-        SharedTableData sharedTableData = SharedTableData(gameObject);
-        PhraseMetadata metadata = phraseMetadata(gameObject);
+      var groupedObjectsByProvider = gameObjects.GroupBy(x => {
+        SharedTableData sharedTableData = SharedTableData(x);
         PhraseProvider provider = Provider(stringTableCollection(sharedTableData));
-        string keyName = KeyName(gameObject);
-        Debug.Log($"Uploading screenshot for key \"{keyName}\"");
+        return provider;
+      }).ToDictionary(g => g.Key, g => g.Select(x => phraseMetadata(x)).ToList());
 
-        if(metadata.ScreenshotId != null) {
-          provider.DeleteScreenshot(metadata.ScreenshotId);
-        }
-
-        provider.UploadScreenshot(keyName, screenshotPath, metadata);
+      foreach (var group in groupedObjectsByProvider) 
+      {
+        PhraseProvider provider = group.Key;
+        provider.UploadScreenshot(group.Value, screenshotPath);
       }
       System.IO.File.Delete(screenshotPath);
 
