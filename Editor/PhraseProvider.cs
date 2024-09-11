@@ -363,6 +363,11 @@ namespace Phrase
             metadata.ScreenshotId = screenshot.id;
         }
 
+        public void DeleteScreenshot(string screenshotId)
+        {
+            Client.DeleteScreenshot(m_selectedProjectId, screenshotId);
+        }
+
         public string KeyUrl(string keyId)
         {
             return $"{StringsAppHost}/editor/v4/accounts/{m_selectedAccountId}/projects/{m_selectedProjectId}?keyId={keyId}";

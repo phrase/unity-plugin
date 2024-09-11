@@ -201,6 +201,12 @@ namespace Phrase
             response.EnsureSuccessStatusCode();
         }
 
+        public void DeleteScreenshot(string projectID, string screenshotID)
+        {
+            string url = string.Format("projects/{0}/screenshots/{1}", projectID, screenshotID);
+            Client.DeleteAsync(url);
+        }
+
         public async Task<Key> GetKey(string projectID, string keyName)
         {
             string url = string.Format($"projects/{{0}}/keys?q=name:{Uri.EscapeDataString(keyName)}", projectID);

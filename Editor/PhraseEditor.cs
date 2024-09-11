@@ -113,6 +113,10 @@ namespace Phrase
         string keyName = KeyName(gameObject);
         Debug.Log($"Uploading screenshot for key \"{keyName}\"");
 
+        if(metadata.ScreenshotId != null) {
+          provider.DeleteScreenshot(metadata.ScreenshotId);
+        }
+
         provider.UploadScreenshot(keyName, screenshotPath, metadata);
       }
       System.IO.File.Delete(screenshotPath);
