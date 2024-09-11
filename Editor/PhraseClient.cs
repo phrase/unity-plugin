@@ -228,6 +228,7 @@ namespace Phrase
             var response = await Client.PostAsync(url, form);
             var responseContent = await response.Content.ReadAsStringAsync();
             response.EnsureSuccessStatusCode();
+            fileStream.Close();
             return Task.FromResult(responseContent).Result;
         }
     }
