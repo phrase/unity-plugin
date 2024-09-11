@@ -99,6 +99,7 @@ namespace Phrase
         public class Screenshot
         {
             public string id;
+            public string screenshot_url;
         }
         
         public class ScreenshotMarker

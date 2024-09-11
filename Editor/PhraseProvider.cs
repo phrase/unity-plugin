@@ -370,6 +370,7 @@ namespace Phrase
                     }
                     
                     metadata.ScreenshotId = screenshot.id;
+                    metadata.ScreenshotUrl = screenshot.screenshot_url;
                 }
             }
         }

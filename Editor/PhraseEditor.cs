@@ -162,12 +162,22 @@ namespace Phrase
           EditorGUILayout.EndHorizontal();
           metadata.Description = EditorGUILayout.TextField("Description", metadata.Description);
           metadata.MaxLength = EditorGUILayout.IntField(new GUIContent("Max Length", "set 0 for no limit"), metadata.MaxLength);
+          
+          if(metadata.ScreenshotId != null)
+          { 
+            EditorGUI.indentLevel++;
+            if (GUILayout.Button("Open Screenshot")) {
+              Application.OpenURL(metadata.ScreenshotUrl);
+            }
+          }
 
           EditorGUI.indentLevel--;
         }
       }
 
-      if (GUILayout.Button("Upload Screenshot"))
+      GUILayout.Space(20);
+
+      if (GUILayout.Button("Upload Screenshot", GUILayout.Height(50)))
       {
         EditorCoroutineUtility.StartCoroutine(UploadScreenshots(translatableObjects), this);
       }

@@ -16,5 +16,7 @@ namespace Phrase
     public string ScreenshotId;
 
     public string ScreenshotMarkerId;
+
+    public string ScreenshotUrl;
   }
 }
