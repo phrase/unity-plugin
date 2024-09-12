@@ -46,13 +46,10 @@ namespace Phrase
       return null;
     }
 
-    private StringTableCollection stringTableCollection(SharedTableData sharedTableData)
+    private PhraseProvider Provider(GameObject gameObject)
     {
-      return PhraseProvider.ConnectedStringTableCollections().FirstOrDefault(x => x.SharedData == sharedTableData);
-    }
-
-    private PhraseProvider Provider(StringTableCollection stringTableCollection)
-    {
+      var sharedTableData = SharedTableData(gameObject);
+      var stringTableCollection = PhraseProvider.ConnectedStringTableCollections().FirstOrDefault(x => x.SharedData == sharedTableData);
       return PhraseProvider.FindFor(stringTableCollection);
     }
 
@@ -114,7 +111,10 @@ namespace Phrase
 
     public void OnGUI()
     {
-      var translatableObjects = Selection.gameObjects.Where(x => LocalizedString(x) != null).ToArray();
+      // This finds all selected GameObjects and their children that have a LocalizedString component
+      // TODO: check how it behaves with lots of objects
+      var selectedWithChildren = Selection.gameObjects.SelectMany(x => x.GetComponentsInChildren<Transform>()).Select(x => x.gameObject).ToArray();
+      var translatableObjects = selectedWithChildren.Where(x => LocalizedString(x) != null && Provider(x) != null).ToArray();
       if (translatableObjects.Length == 0)
       {
         EditorGUILayout.HelpBox("Select a localized GameObject to edit its Phrase metadata.", MessageType.Info);
@@ -129,8 +129,8 @@ namespace Phrase
         {
           EditorGUI.indentLevel++;
           SharedTableData sharedTableData = SharedTableData(gameObject);
+          PhraseProvider provider = Provider(gameObject);
           PhraseMetadata metadata = phraseMetadata(gameObject);
-          PhraseProvider provider = Provider(stringTableCollection(sharedTableData));
           if (metadata == null)
           {
             metadata = new PhraseMetadata();
