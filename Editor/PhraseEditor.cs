@@ -136,20 +136,36 @@ namespace Phrase
       }
       scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
       foreach (var gameObject in translatableObjects)
-      {
-        EditorGUILayout.LabelField(gameObject.name, EditorStyles.boldLabel);
+      { 
+        SharedTableData sharedTableData = SharedTableData(gameObject);
+        PhraseProvider provider = Provider(stringTableCollection(sharedTableData));
+        PhraseMetadata metadata = phraseMetadata(gameObject);
         string keyName = KeyName(gameObject);
+        if (metadata == null)
+        {
+          metadata = new PhraseMetadata();
+          sharedTableData.GetEntry(keyName).Metadata.AddMetadata(metadata);
+        }
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField(gameObject.name, EditorStyles.boldLabel);
+        if (metadata.KeyId != null)
+        {
+          if (GUILayout.Button("Open in Phrase", GUILayout.Width(100))) 
+          {
+            Application.OpenURL(provider.KeyUrl(metadata.KeyId));
+          }
+        }
+        if (metadata.ScreenshotUrl != null)
+        { 
+          if (GUILayout.Button("Open Screenshot")) 
+          {
+            Application.OpenURL(metadata.ScreenshotUrl);
+          }
+        }
+        EditorGUILayout.EndHorizontal();
         if (keyName != null)
         {
           EditorGUI.indentLevel++;
-          SharedTableData sharedTableData = SharedTableData(gameObject);
-          PhraseMetadata metadata = phraseMetadata(gameObject);
-          PhraseProvider provider = Provider(stringTableCollection(sharedTableData));
-          if (metadata == null)
-          {
-            metadata = new PhraseMetadata();
-            sharedTableData.GetEntry(keyName).Metadata.AddMetadata(metadata);
-          }
           EditorGUILayout.BeginHorizontal();
           EditorGUILayout.LabelField("Phrase Key", keyName);
           if (metadata.KeyId != null)
@@ -158,10 +174,6 @@ namespace Phrase
             {
               EditorGUIUtility.systemCopyBuffer = keyName;
             }
-            if (GUILayout.Button("Open in Phrase", GUILayout.Width(100))) {
-              Application.OpenURL(provider.KeyUrl(metadata.KeyId));
-            }
-
             if (metadata.ScreenshotId != null)
             {
               hasScreenshots = true;
@@ -170,15 +182,6 @@ namespace Phrase
           EditorGUILayout.EndHorizontal();
           metadata.Description = EditorGUILayout.TextField("Description", metadata.Description);
           metadata.MaxLength = EditorGUILayout.IntField(new GUIContent("Max Length", "set 0 for no limit"), metadata.MaxLength);
-          
-          if(metadata.ScreenshotId != null)
-          { 
-            EditorGUI.indentLevel++;
-            if (GUILayout.Button("Open Screenshot")) {
-              Application.OpenURL(metadata.ScreenshotUrl);
-            }
-          }
-
           EditorGUI.indentLevel--;
         }
       }
@@ -186,7 +189,7 @@ namespace Phrase
       GUILayout.Space(20);
 
       var screenshotButtonLabel = hasScreenshots ? "Update Screenshot" : "Upload Screenshot";
-      if (GUILayout.Button(screenshotButtonLabel, GUILayout.Height(50)))
+      if (GUILayout.Button(screenshotButtonLabel))
       {
         EditorCoroutineUtility.StartCoroutine(UploadScreenshots(translatableObjects), this);
       }
