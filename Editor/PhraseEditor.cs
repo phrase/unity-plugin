@@ -113,8 +113,11 @@ namespace Phrase
     {
       // This finds all selected GameObjects and their children that have a LocalizedString component
       // TODO: check how it behaves with lots of objects
-      var selectedWithChildren = Selection.gameObjects.SelectMany(x => x.GetComponentsInChildren<Transform>()).Select(x => x.gameObject).ToArray();
-      var translatableObjects = selectedWithChildren.Where(x => LocalizedString(x) != null && Provider(x) != null).ToArray();
+      var translatableObjects = Selection.gameObjects
+        .SelectMany(x => x.GetComponentsInChildren<Transform>())
+        .Select(x => x.gameObject)
+        .Where(x => LocalizedString(x) != null && Provider(x) != null)
+        .ToArray();
       if (translatableObjects.Length == 0)
       {
         EditorGUILayout.HelpBox("Select a localized GameObject to edit its Phrase metadata.", MessageType.Info);
