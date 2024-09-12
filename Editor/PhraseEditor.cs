@@ -2,7 +2,6 @@ using System.Collections;
 using System.Linq;
 using Unity.EditorCoroutines.Editor;
 using UnityEditor;
-using UnityEditor.Localization;
 using UnityEngine;
 using UnityEngine.Localization;
 using UnityEngine.Localization.Components;
@@ -93,7 +92,7 @@ namespace Phrase
       return null;
     }
 
-    private IEnumerator UploadScreenshot(string keyName, PhraseMetadata metadata, PhraseProvider provider)
+    private IEnumerator UploadScreenshots(GameObject[] gameObjects)
     {
       string screenshotPath = "Temp/phrase_screenshot.png";
       System.IO.File.Delete(screenshotPath);
@@ -101,10 +100,20 @@ namespace Phrase
       ScreenCapture.CaptureScreenshot(screenshotPath);
 
       yield return new WaitForEndOfFrame();
-      provider.UploadScreenshot(keyName, screenshotPath, metadata);
+
+      var groupedObjectsByProvider = gameObjects.GroupBy(x => {
+        PhraseProvider provider = Provider(x);
+        return provider;
+      }).ToDictionary(g => g.Key, g => g.Select(x => phraseMetadata(x)).ToList());
+
+      foreach (var group in groupedObjectsByProvider)
+      {
+        PhraseProvider provider = group.Key;
+        provider.UploadScreenshot(group.Value, screenshotPath);
+      }
       System.IO.File.Delete(screenshotPath);
 
-      EditorUtility.DisplayDialog("Upload Screenshot", $"Screenshot uploaded for key \"{keyName}\"", "OK");
+      // EditorUtility.DisplayDialog("Upload Screenshot", $"Screenshot uploaded for key \"{keyName}\"", "OK");
     }
 
     private Vector2 scrollPosition;
@@ -118,6 +127,8 @@ namespace Phrase
         .Select(x => x.gameObject)
         .Where(x => LocalizedString(x) != null && Provider(x) != null)
         .ToArray();
+      var hasScreenshots = false;
+
       if (translatableObjects.Length == 0)
       {
         EditorGUILayout.HelpBox("Select a localized GameObject to edit its Phrase metadata.", MessageType.Info);
@@ -126,19 +137,35 @@ namespace Phrase
       scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
       foreach (var gameObject in translatableObjects)
       {
-        EditorGUILayout.LabelField(gameObject.name, EditorStyles.boldLabel);
+        SharedTableData sharedTableData = SharedTableData(gameObject);
+        PhraseProvider provider = Provider(gameObject);
+        PhraseMetadata metadata = phraseMetadata(gameObject);
         string keyName = KeyName(gameObject);
+        if (metadata == null)
+        {
+          metadata = new PhraseMetadata();
+          sharedTableData.GetEntry(keyName).Metadata.AddMetadata(metadata);
+        }
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField(gameObject.name, EditorStyles.boldLabel);
+        if (metadata.KeyId != null)
+        {
+          if (GUILayout.Button("Open in Phrase", GUILayout.Width(100)))
+          {
+            Application.OpenURL(provider.KeyUrl(metadata.KeyId));
+          }
+        }
+        if (!string.IsNullOrEmpty(metadata.ScreenshotUrl))
+        {
+          if (GUILayout.Button("Open Screenshot"))
+          {
+            Application.OpenURL(metadata.ScreenshotUrl);
+          }
+        }
+        EditorGUILayout.EndHorizontal();
         if (keyName != null)
         {
           EditorGUI.indentLevel++;
-          SharedTableData sharedTableData = SharedTableData(gameObject);
-          PhraseProvider provider = Provider(gameObject);
-          PhraseMetadata metadata = phraseMetadata(gameObject);
-          if (metadata == null)
-          {
-            metadata = new PhraseMetadata();
-            sharedTableData.GetEntry(keyName).Metadata.AddMetadata(metadata);
-          }
           EditorGUILayout.BeginHorizontal();
           EditorGUILayout.LabelField("Phrase Key", keyName);
           if (metadata.KeyId != null)
@@ -147,21 +174,26 @@ namespace Phrase
             {
               EditorGUIUtility.systemCopyBuffer = keyName;
             }
-            if (GUILayout.Button("Open in Phrase", GUILayout.Width(100))) {
-              Application.OpenURL(provider.KeyUrl(metadata.KeyId));
+            if (metadata.ScreenshotId != null)
+            {
+              hasScreenshots = true;
             }
           }
           EditorGUILayout.EndHorizontal();
           metadata.Description = EditorGUILayout.TextField("Description", metadata.Description);
           metadata.MaxLength = EditorGUILayout.IntField(new GUIContent("Max Length", "set 0 for no limit"), metadata.MaxLength);
-          // TODO: extract screenshot upload to apply to multiple keys
-          if (GUILayout.Button("Upload Screenshot"))
-          {
-            EditorCoroutineUtility.StartCoroutine(UploadScreenshot(keyName, metadata, provider), this);
-          }
           EditorGUI.indentLevel--;
         }
       }
+
+      GUILayout.Space(20);
+
+      var screenshotButtonLabel = hasScreenshots ? "Update Screenshot" : "Upload Screenshot";
+      if (GUILayout.Button(screenshotButtonLabel))
+      {
+        EditorCoroutineUtility.StartCoroutine(UploadScreenshots(translatableObjects), this);
+      }
+
       EditorGUILayout.EndScrollView();
     }
 
