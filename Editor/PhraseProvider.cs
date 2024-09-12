@@ -260,11 +260,13 @@ namespace Phrase
                         }
                         const string dir = "Temp/";
                         string path = dir + matchingStringTable.name + ".csv";
+                        string tag = phraseExtension.m_identifierType == TableIdentifierType.Tag ? phraseExtension.m_identifier : null;
                         using (var stream = new StreamWriter(path, false, new UTF8Encoding(false)))
                         {
-                            Csv.Export(stream, collection, ColumnMappings(locale));
+                            string keyPrefix = phraseExtension.m_identifierType == TableIdentifierType.KeyPrefix ? phraseExtension.m_identifier : null;
+                            Csv.Export(stream, collection, ColumnMappings(locale, keyPrefix));
                         }
-                        Client.UploadFile(path, m_selectedProjectId, locale.id, locale.code, false);
+                        Client.UploadFile(path, m_selectedProjectId, locale.id, locale.code, false, tag);
                         if (File.Exists(path)) File.Delete(path);
                     }
                 }
@@ -279,30 +281,30 @@ namespace Phrase
             EditorCoroutineUtility.StartCoroutineOwnerless(Pull(ConnectedStringTableCollections()));
         }
 
-        private List<CsvColumns> ColumnMappings(Locale locale)
+        private List<CsvColumns> ColumnMappings(Locale locale, string keyPrefix)
         {
             return new List<CsvColumns>
             {
-                new KeyIdColumns {
-                    IncludeId = false,
-                    IncludeSharedComments = false,
-                    KeyFieldName = "key_name"
+                new PhraseCsvColumns {
+                    KeyPrefix = keyPrefix
                 },
                 new LocaleColumns {
                     LocaleIdentifier = locale.code,
                     FieldName = locale.code
                 },
-                new PhraseCsvColumns()
             };
         }
 
         private async void PullSingleLocale(StringTableCollection collection, Locale selectedLocale)
         {
             Log("Downloading locale " + selectedLocale.code);
-            var csvContent = await Client.DownloadLocale(m_selectedProjectId, selectedLocale.id);
+            var phraseExtension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
+            string tag = phraseExtension.m_identifierType == TableIdentifierType.Tag ? phraseExtension.m_identifier : null;
+            var csvContent = await Client.DownloadLocale(m_selectedProjectId, selectedLocale.id, tag);
             using (var reader = new StringReader(csvContent))
             {
-                var columnMappings = ColumnMappings(selectedLocale);
+                string keyPrefix = phraseExtension.m_identifierType == TableIdentifierType.KeyPrefix ? phraseExtension.m_identifier : null;
+                var columnMappings = ColumnMappings(selectedLocale, keyPrefix);
                 Csv.ImportInto(reader, collection, columnMappings);
             }
         }

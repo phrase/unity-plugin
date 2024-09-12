@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using Newtonsoft.Json;
 
 namespace Phrase
@@ -123,9 +124,13 @@ namespace Phrase
             Client.BaseAddress = new Uri(ApiUrl);
         }
 
-        public async Task<string> DownloadLocale(string projectID, string localeID)
+        public async Task<string> DownloadLocale(string projectID, string localeID, string tag)
         {
             string url = string.Format("projects/{0}/locales/{1}/download?file_format=csv&format_options%5Bexport_max_characters_allowed%5D=true&format_options%5Bexport_key_id%5D=true&include_empty_translations=true", projectID, localeID);
+            if (tag != null)
+            {
+                url += "&tags=" + HttpUtility.UrlEncode(tag);
+            }
             using HttpResponseMessage response = await Client.GetAsync(url);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();
@@ -168,7 +173,7 @@ namespace Phrase
             } while (currentBatch.Count == 100);  // Continue if a full batch is returned
         }
 
-        public async void UploadFile(string path, string projectID, string localeID, string localeCode, bool autoTranslate)
+        public async void UploadFile(string path, string projectID, string localeID, string localeCode, bool autoTranslate, string tag)
         {
             string url = string.Format("projects/{0}/uploads", projectID);
             NameValueCollection nvc = new NameValueCollection
@@ -176,13 +181,21 @@ namespace Phrase
                 { "locale_id", localeID },
                 { "file_format", "csv" },
                 { "update_descriptions", "true" },
-                { "autotranslate", autoTranslate.ToString() },
-                { $"locale_mapping[{localeCode}]", "2" },
+                { "update_translations", "true" },
+                { $"locale_mapping[{localeCode}]", "4" },
                 { "format_options[key_index]", "1" },
-                { "format_options[comment_index]", "3" },
-                { "format_options[max_characters_allowed_column]", "4" },
+                { "format_options[comment_index]", "2" },
+                { "format_options[max_characters_allowed_column]", "3" },
                 { "format_options[header_content_row]", "true" }
             };
+            if (autoTranslate)
+            {
+                nvc.Add("autotranslate", "true");
+            }
+            if (tag != null)
+            {
+                nvc.Add("tags", tag);
+            }
 
             await HttpUploadFile(url, path, "file", "text/plain", nvc);
         }

@@ -7,16 +7,27 @@ using UnityEngine.Localization.Tables;
 
 namespace Phrase
 {
-    public class PhraseCsvColumns : CsvColumns
+    public class PhraseCsvColumns : CsvColumns, IKeyColumn
     {
-        int m_KeyIdIndex, m_DescriptionIndex, m_MaxCharsIndex;
+        int m_KeyNameIndex, m_KeyIdIndex, m_DescriptionIndex, m_MaxCharsIndex;
 
+        string m_KeyPrefix = null;
+        private const string k_KeyName = "key_name";
         private const string k_KeyId = "key_id";
         private const string k_Description = "comment";
         private const string k_MaxChars = "max_characters_allowed";
+        SharedTableData m_SharedTableData;
+
+        public string KeyPrefix
+        {
+            get => m_KeyPrefix;
+            set => m_KeyPrefix = value;
+        }
 
         public override void ReadBegin(StringTableCollection collection, CsvReader reader)
         {
+            m_SharedTableData = collection.SharedData;
+            m_KeyNameIndex = reader.GetFieldIndex(k_KeyName, isTryGet: true);
             m_KeyIdIndex = reader.GetFieldIndex(k_KeyId, isTryGet: true);
             m_DescriptionIndex = reader.GetFieldIndex(k_Description, isTryGet: true);
             m_MaxCharsIndex = reader.GetFieldIndex(k_MaxChars, isTryGet: true);
@@ -55,12 +66,20 @@ namespace Phrase
 
         public override void WriteBegin(StringTableCollection collection, CsvWriter writer)
         {
+            writer.WriteField(k_KeyName);
             writer.WriteField(k_Description);
             writer.WriteField(k_MaxChars);
         }
 
         public override void WriteRow(SharedTableData.SharedTableEntry keyEntry, IList<StringTableEntry> tableEntries, CsvWriter writer)
         {
+            string keyName = keyEntry.Key;
+            if (!string.IsNullOrEmpty(m_KeyPrefix))
+            {
+                keyName = m_KeyPrefix + keyName;
+            }
+            writer.WriteField(keyName);
+
             var metadata = keyEntry.Metadata.GetMetadata<PhraseMetadata>();
             if (metadata != null)
             {
@@ -79,6 +98,21 @@ namespace Phrase
             // Write empty entries
             writer.WriteField(string.Empty);
             writer.WriteField(string.Empty);
+        }
+
+        public SharedTableData.SharedTableEntry ReadKey(CsvReader reader)
+        {
+            string keyName = reader.GetField(m_KeyNameIndex);
+            if (string.IsNullOrEmpty(keyName))
+                return null;
+            if (!string.IsNullOrEmpty(m_KeyPrefix))
+            {
+                if (!keyName.StartsWith(m_KeyPrefix))
+                    return null;
+                // strip the prefix
+                keyName = keyName.Substring(m_KeyPrefix.Length);
+            }
+            return m_SharedTableData.GetEntry(keyName) ?? m_SharedTableData.AddKey(keyName);
         }
     }
 }
