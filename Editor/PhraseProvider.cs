@@ -350,19 +350,31 @@ namespace Phrase
             AssetDatabase.StopAssetEditing();
         }
 
-        public async void UploadScreenshot(string keyName, string path, PhraseMetadata metadata)
+        public async void UploadScreenshot(List<PhraseMetadata> metadataList, string path)
         {
-            string name = keyName + "_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
+            string name = "screenshot_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
             Screenshot screenshot = await Client.UploadScreenshot(m_selectedProjectId, name, path);
-            if (screenshot != null)
+
+            if (screenshot != null) 
             {
-                Key key = await Client.GetKey(m_selectedProjectId, keyName);
-                if (key != null)
+                foreach (var metadata in metadataList)
                 {
-                    Client.CreateScreenshotMarker(m_selectedProjectId, screenshot.id, key.id);
+                    if (metadata.ScreenshotMarkerId != null)
+                    {
+                        Client.DeleteScreenshotMarker(m_selectedProjectId, metadata.ScreenshotId, metadata.ScreenshotMarkerId);
+                    }
+
+                    ScreenshotMarker marker = await Client.CreateScreenshotMarker(m_selectedProjectId, screenshot.id, metadata.KeyId);
+
+                    if (marker != null)
+                    {
+                        metadata.ScreenshotMarkerId = marker.id;
+                    }
+                    
+                    metadata.ScreenshotId = screenshot.id;
+                    metadata.ScreenshotUrl = screenshot.screenshot_url;
                 }
             }
-            metadata.ScreenshotId = screenshot.id;
         }
 
         public string KeyUrl(string keyId)

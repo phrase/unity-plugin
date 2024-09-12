@@ -100,6 +100,12 @@ namespace Phrase
         public class Screenshot
         {
             public string id;
+            public string screenshot_url;
+        }
+        
+        public class ScreenshotMarker
+        {
+            public string id;
         }
 
         [Serializable]
@@ -206,12 +212,20 @@ namespace Phrase
             return JsonConvert.DeserializeObject<Screenshot>(responseString);
         }
 
-        public void CreateScreenshotMarker(string projectID, string screenshotID, string keyID)
+        public async Task<ScreenshotMarker> CreateScreenshotMarker(string projectID, string screenshotID, string keyID)
         {
             string url = string.Format("projects/{0}/screenshots/{1}/markers", projectID, screenshotID);
             var content = new StringContent(JsonConvert.SerializeObject(new { key_id = keyID }), Encoding.UTF8, "application/json");
             var response = Client.PostAsync(url, content).Result;
             response.EnsureSuccessStatusCode();
+
+            return JsonConvert.DeserializeObject<ScreenshotMarker>(await response.Content.ReadAsStringAsync());
+        }
+
+        public void DeleteScreenshotMarker(string projectID, string screenshotID, string markerID)
+        {
+            string url = string.Format("projects/{0}/screenshots/{1}/markers/{2}", projectID, screenshotID, markerID);
+            Client.DeleteAsync(url);
         }
 
         public async Task<Key> GetKey(string projectID, string keyName)
@@ -241,6 +255,7 @@ namespace Phrase
             var response = await Client.PostAsync(url, form);
             var responseContent = await response.Content.ReadAsStringAsync();
             response.EnsureSuccessStatusCode();
+            fileStream.Close();
             return Task.FromResult(responseContent).Result;
         }
     }
