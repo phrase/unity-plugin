@@ -1,9 +1,7 @@
-using System;
 using System.Collections;
 using System.Linq;
 using Unity.EditorCoroutines.Editor;
 using UnityEditor;
-using UnityEditor.Localization;
 using UnityEngine;
 using UnityEngine.Localization;
 using UnityEngine.Localization.Components;
@@ -47,13 +45,10 @@ namespace Phrase
       return null;
     }
 
-    private StringTableCollection stringTableCollection(SharedTableData sharedTableData)
+    private PhraseProvider Provider(GameObject gameObject)
     {
-      return PhraseProvider.ConnectedStringTableCollections().FirstOrDefault(x => x.SharedData == sharedTableData);
-    }
-
-    private PhraseProvider Provider(StringTableCollection stringTableCollection)
-    {
+      var sharedTableData = SharedTableData(gameObject);
+      var stringTableCollection = PhraseProvider.ConnectedStringTableCollections().FirstOrDefault(x => x.SharedData == sharedTableData);
       return PhraseProvider.FindFor(stringTableCollection);
     }
 
@@ -107,12 +102,11 @@ namespace Phrase
       yield return new WaitForEndOfFrame();
 
       var groupedObjectsByProvider = gameObjects.GroupBy(x => {
-        SharedTableData sharedTableData = SharedTableData(x);
-        PhraseProvider provider = Provider(stringTableCollection(sharedTableData));
+        PhraseProvider provider = Provider(x);
         return provider;
       }).ToDictionary(g => g.Key, g => g.Select(x => phraseMetadata(x)).ToList());
 
-      foreach (var group in groupedObjectsByProvider) 
+      foreach (var group in groupedObjectsByProvider)
       {
         PhraseProvider provider = group.Key;
         provider.UploadScreenshot(group.Value, screenshotPath);
@@ -126,7 +120,13 @@ namespace Phrase
 
     public void OnGUI()
     {
-      var translatableObjects = Selection.gameObjects.Where(x => LocalizedString(x) != null).ToArray();
+      // This finds all selected GameObjects and their children that have a LocalizedString component
+      // TODO: check how it behaves with lots of objects
+      var translatableObjects = Selection.gameObjects
+        .SelectMany(x => x.GetComponentsInChildren<Transform>())
+        .Select(x => x.gameObject)
+        .Where(x => LocalizedString(x) != null && Provider(x) != null)
+        .ToArray();
       var hasScreenshots = false;
 
       if (translatableObjects.Length == 0)
@@ -136,9 +136,9 @@ namespace Phrase
       }
       scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
       foreach (var gameObject in translatableObjects)
-      { 
+      {
         SharedTableData sharedTableData = SharedTableData(gameObject);
-        PhraseProvider provider = Provider(stringTableCollection(sharedTableData));
+        PhraseProvider provider = Provider(gameObject);
         PhraseMetadata metadata = phraseMetadata(gameObject);
         string keyName = KeyName(gameObject);
         if (metadata == null)
@@ -150,14 +150,14 @@ namespace Phrase
         EditorGUILayout.LabelField(gameObject.name, EditorStyles.boldLabel);
         if (metadata.KeyId != null)
         {
-          if (GUILayout.Button("Open in Phrase", GUILayout.Width(100))) 
+          if (GUILayout.Button("Open in Phrase", GUILayout.Width(100)))
           {
             Application.OpenURL(provider.KeyUrl(metadata.KeyId));
           }
         }
-        if (metadata.ScreenshotUrl != null)
-        { 
-          if (GUILayout.Button("Open Screenshot")) 
+        if (!string.IsNullOrEmpty(metadata.ScreenshotUrl))
+        {
+          if (GUILayout.Button("Open Screenshot"))
           {
             Application.OpenURL(metadata.ScreenshotUrl);
           }
