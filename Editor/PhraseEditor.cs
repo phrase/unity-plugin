@@ -20,7 +20,7 @@ namespace Phrase
       window.Show();
     }
 
-    private LocalizedString LocalizedString(GameObject gameObject)
+    private LocalizedString LocalizedString(Transform gameObject)
     {
       var localizeStringEvent = gameObject.GetComponent<LocalizeStringEvent>();
       if (localizeStringEvent != null)
@@ -45,30 +45,32 @@ namespace Phrase
       return null;
     }
 
-    private PhraseProvider Provider(GameObject gameObject)
+    private PhraseProvider Provider(SharedTableData sharedTableData)
     {
-      var sharedTableData = SharedTableData(gameObject);
       var stringTableCollection = PhraseProvider.ConnectedStringTableCollections().FirstOrDefault(x => x.SharedData == sharedTableData);
       return PhraseProvider.FindFor(stringTableCollection);
     }
 
-    private SharedTableData SharedTableData(GameObject gameObject)
+    private SharedTableData SharedTableData(LocalizedString localizedString)
     {
-      var localizedString = LocalizedString(gameObject);
-      if (localizedString != null)
+      if (localizedString == null)
       {
-        var guid = localizedString.TableReference.TableCollectionNameGuid.ToString("N");
-        var path = AssetDatabase.GUIDToAssetPath(guid);
-        return AssetDatabase.LoadAssetAtPath<SharedTableData>(path);
+        return null;
       }
-
-      return null;
+      var guid = localizedString.TableReference.TableCollectionNameGuid.ToString("N");
+      var path = AssetDatabase.GUIDToAssetPath(guid);
+      return AssetDatabase.LoadAssetAtPath<SharedTableData>(path);
     }
 
-    private string KeyName(GameObject gameObject)
+    private SharedTableData SharedTableData(Transform gameObject)
     {
       var localizedString = LocalizedString(gameObject);
-      var sharedTableData = SharedTableData(gameObject);
+      return SharedTableData(localizedString);
+    }
+
+    private string KeyName(LocalizedString localizedString, SharedTableData sharedTableData = null)
+    {
+      if (sharedTableData == null) sharedTableData = SharedTableData(localizedString);
       if (localizedString != null && sharedTableData != null)
       {
         return localizedString.TableEntryReference.ResolveKeyName(sharedTableData);
@@ -77,22 +79,17 @@ namespace Phrase
       return null;
     }
 
-    private PhraseMetadata phraseMetadata(GameObject gameObject)
+    private PhraseMetadata PhraseMetadata(SharedTableData sharedTableData, string keyName)
     {
-      var sharedTableData = SharedTableData(gameObject);
       if (sharedTableData != null)
       {
-        var keyName = KeyName(gameObject);
-        if (keyName != null)
-        {
-          return sharedTableData.GetEntry(keyName).Metadata.GetMetadata<PhraseMetadata>();
-        }
+        return sharedTableData.GetEntry(keyName).Metadata.GetMetadata<PhraseMetadata>();
       }
 
       return null;
     }
 
-    private IEnumerator UploadScreenshots(GameObject[] gameObjects)
+    private IEnumerator UploadScreenshots(Transform[] gameObjects)
     {
       string screenshotPath = "Temp/phrase_screenshot.png";
       System.IO.File.Delete(screenshotPath);
@@ -102,9 +99,15 @@ namespace Phrase
       yield return new WaitForEndOfFrame();
 
       var groupedObjectsByProvider = gameObjects.GroupBy(x => {
-        PhraseProvider provider = Provider(x);
+        SharedTableData sharedTableData = SharedTableData(x);
+        PhraseProvider provider = Provider(sharedTableData);
         return provider;
-      }).ToDictionary(g => g.Key, g => g.Select(x => phraseMetadata(x)).ToList());
+      }).ToDictionary(g => g.Key, g => g.Select(x => {
+        var localizedString = LocalizedString(x);
+        var sharedTableData = SharedTableData(localizedString);
+        var keyName = KeyName(localizedString, sharedTableData);
+        return PhraseMetadata(sharedTableData, keyName);
+      }).ToList());
 
       foreach (var group in groupedObjectsByProvider)
       {
@@ -113,23 +116,18 @@ namespace Phrase
       }
       System.IO.File.Delete(screenshotPath);
 
-      // EditorUtility.DisplayDialog("Upload Screenshot", $"Screenshot uploaded for key \"{keyName}\"", "OK");
+      EditorUtility.DisplayDialog($"Upload Screenshot", $"Screenshot uploaded for {gameObjects.Length} key(s)", "OK");
     }
 
     private Vector2 scrollPosition;
 
+    private Transform[] translatableObjects;
+
     public void OnGUI()
     {
-      // This finds all selected GameObjects and their children that have a LocalizedString component
-      // TODO: check how it behaves with lots of objects
-      var translatableObjects = Selection.gameObjects
-        .SelectMany(x => x.GetComponentsInChildren<Transform>())
-        .Select(x => x.gameObject)
-        .Where(x => LocalizedString(x) != null && Provider(x) != null)
-        .ToArray();
       var hasScreenshots = false;
 
-      if (translatableObjects.Length == 0)
+      if (translatableObjects == null || translatableObjects.Length == 0)
       {
         EditorGUILayout.HelpBox("Select a localized GameObject to edit its Phrase metadata.", MessageType.Info);
         return;
@@ -137,10 +135,11 @@ namespace Phrase
       scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
       foreach (var gameObject in translatableObjects)
       {
-        SharedTableData sharedTableData = SharedTableData(gameObject);
-        PhraseProvider provider = Provider(gameObject);
-        PhraseMetadata metadata = phraseMetadata(gameObject);
-        string keyName = KeyName(gameObject);
+        LocalizedString localizedString = LocalizedString(gameObject);
+        SharedTableData sharedTableData = SharedTableData(localizedString);
+        PhraseProvider provider = Provider(sharedTableData);
+        string keyName = KeyName(localizedString, sharedTableData);
+        PhraseMetadata metadata = PhraseMetadata(sharedTableData, keyName);
         if (metadata == null)
         {
           metadata = new PhraseMetadata();
@@ -199,6 +198,18 @@ namespace Phrase
 
     public void OnSelectionChange()
     {
+      // This finds all selected GameObjects and their children that have a LocalizedString component
+      // TODO: check how it behaves with lots of objects
+      translatableObjects = Selection.transforms
+        ?.SelectMany(x => x.GetComponentsInChildren<Transform>())
+        ?.Where(x => {
+          var localizedString = LocalizedString(x);
+          if (localizedString == null) return false;
+          var sharedTableData = SharedTableData(localizedString);
+          var provider = Provider(sharedTableData);
+          return provider != null;
+        })
+        ?.ToArray();
       Repaint();
     }
   }
