@@ -61,6 +61,9 @@ namespace Phrase
         public string m_selectedLocaleId = null;
 
         [SerializeField]
+        public string m_selectedAuthMethod = null;
+
+        [SerializeField]
         public bool m_pushOnlySelected = false;
 
         [SerializeField]
@@ -458,28 +461,33 @@ namespace Phrase
                     }
                 }
 
-                phraseProvider.m_UseOauth = !EditorGUILayout.BeginToggleGroup("Token authentication", !phraseProvider.m_UseOauth);
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiKey"));
-                if (GUILayout.Button("Fetch Projects"))
+                string[] authOptions = new string[] {"Token", "OAuth"};
+                int authOptionIndex = System.Array.IndexOf(authOptions, phraseProvider.m_selectedAuthMethod);
+                authOptionIndex = EditorGUILayout.Popup("Authentication type", authOptionIndex, authOptions);
+                phraseProvider.m_selectedAuthMethod = authOptions[authOptionIndex];
+
+                EditorGUILayout.BeginHorizontal();
+
+                if (phraseProvider.m_selectedAuthMethod == "Token")
                 {
-                    phraseProvider.FetchProjects();
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiKey"));
                 }
-                EditorGUI.indentLevel--;
-                EditorGUILayout.EndToggleGroup();
-                serializedObject.ApplyModifiedProperties();
-                phraseProvider.m_UseOauth = EditorGUILayout.BeginToggleGroup("OAuth authentication", phraseProvider.m_UseOauth);
-                EditorGUI.indentLevel++;
-                using (new EditorGUI.DisabledScope(phraseProvider.m_OauthInProgress))
+                else
                 {
+                    phraseProvider.m_UseOauth = true;
                     string buttonLabel = phraseProvider.m_OauthInProgress ? "Logging in..." : "Log in using OAuth";
                     if (GUILayout.Button(buttonLabel))
                     {
                         PhraseOauthAuthenticator.Authenticate(phraseProvider);
                     }
                 }
-                EditorGUI.indentLevel--;
-                EditorGUILayout.EndToggleGroup();
+
+                if (GUILayout.Button("Fetch Projects", GUILayout.Width(95)))
+                {
+                    phraseProvider.FetchProjects();
+                }
+
+                EditorGUILayout.EndHorizontal();
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
         }
