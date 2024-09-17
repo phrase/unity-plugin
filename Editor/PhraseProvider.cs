@@ -355,7 +355,7 @@ namespace Phrase
             string name = "screenshot_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
             Screenshot screenshot = await Client.UploadScreenshot(m_selectedProjectId, name, path);
 
-            if (screenshot != null) 
+            if (screenshot != null)
             {
                 foreach (var metadata in metadataList)
                 {
@@ -370,7 +370,7 @@ namespace Phrase
                     {
                         metadata.ScreenshotMarkerId = marker.id;
                     }
-                    
+
                     metadata.ScreenshotId = screenshot.id;
                     metadata.ScreenshotUrl = screenshot.screenshot_url;
                 }
@@ -506,6 +506,8 @@ namespace Phrase
             string[] projectNames = filteredProjects
                 .Select(p => TruncateWithEllipsis(p.name, 30))
                 .ToArray();
+
+            System.Array.Sort(projectNames);
 
             int selectedProjectIndex = System.Array.IndexOf(filteredProjects, phraseProvider.Projects.FirstOrDefault(p => p.id == phraseProvider.m_selectedProjectId));
 
