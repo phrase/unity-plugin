@@ -548,7 +548,7 @@ namespace Phrase
         {
             if (phraseProvider.IsProjectSelected && phraseProvider.HasLocaleMismatch)
             {
-                m_showLocalesMissing = EditorGUILayout.BeginFoldoutHeaderGroup(m_showLocalesMissing, "Missing languages");
+                m_showLocalesMissing = EditorGUILayout.BeginFoldoutHeaderGroup(m_showLocalesMissing, "Missing locales");
                 if (m_showLocalesMissing)
                 {
                     ShowLocalLocaleMissingSection();
@@ -563,7 +563,7 @@ namespace Phrase
             if (phraseProvider.MissingLocalesLocally().Count > 0)
             {
                 EditorGUILayout.BeginHorizontal();
-                GUILayout.Label("Languages missing in Unity");
+                GUILayout.Label("Locales missing in Unity");
                 if(GUILayout.Button($"{selectedLocalesToCreateLocally.Count}/{phraseProvider.MissingLocalesLocally().Count} selected", GUILayout.Width(150)))
                 {
                     m_showLocalLocalesMissing = !m_showLocalLocalesMissing;
@@ -595,7 +595,7 @@ namespace Phrase
                             count++;
                         }
                         LocalizationSettings.InitializationOperation.WaitForCompletion();
-                        EditorUtility.DisplayDialog("Languages created", $"{count} language(s) created and saved to {pathToSave}.", "OK");
+                        EditorUtility.DisplayDialog("Locales created", $"{count} language(s) created and saved to {pathToSave}.", "OK");
                     }
                 }
                 EditorGUILayout.EndHorizontal();
@@ -645,7 +645,7 @@ namespace Phrase
             {
                 EditorGUI.indentLevel++;
                 EditorGUILayout.BeginHorizontal();
-                GUILayout.Label("Languages missing in Phrase");
+                GUILayout.Label("Locales missing in Phrase");
                 if(GUILayout.Button($"{selectedLocalesToCreateRemotely.Count}/{phraseProvider.MissingLocalesRemotely().Count} selected", GUILayout.Width(150)))
                 {
                     m_showRemoteLocalesMissing = !m_showRemoteLocalesMissing;
@@ -665,14 +665,14 @@ namespace Phrase
                             count++;
                         }
                         phraseProvider.FetchLocales();
-                        EditorUtility.DisplayDialog("Languages created", $"{count} languages(s) created in Phrase.", "OK");
+                        EditorUtility.DisplayDialog("Locales created", $"{count} locales(s) created in Phrase.", "OK");
                     }
                 }
                 EditorGUILayout.EndHorizontal();
                 if(m_showRemoteLocalesMissing)
                 {
                     EditorGUILayout.BeginVertical();
-                    EditorGUILayout.HelpBox("The following languages are missing in Phrase Strings:", MessageType.None);
+                    EditorGUILayout.HelpBox("The following locales are missing in Phrase Strings:", MessageType.None);
                     if (EditorGUILayout.ToggleLeft("Select all", selectAllLocalesToCreateRemotely, EditorStyles.boldLabel))
                     {
                         if (!selectAllLocalesToCreateRemotely)
