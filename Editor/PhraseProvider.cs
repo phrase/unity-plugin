@@ -61,7 +61,7 @@ namespace Phrase
         public string m_selectedLocaleId = null;
 
         [SerializeField]
-        public string m_selectedAuthMethod = null;
+        public string m_selectedAuthMethod = "Token";
 
         [SerializeField]
         public bool m_pushOnlySelected = false;
@@ -743,7 +743,7 @@ namespace Phrase
 
         private void ShowPushSection()
         {
-            phraseProvider.m_pushOnlySelected = EditorGUILayout.BeginToggleGroup("Push only selected locale:", phraseProvider.m_pushOnlySelected);
+            // phraseProvider.m_pushOnlySelected = EditorGUILayout.BeginToggleGroup("Push only selected locale:", phraseProvider.m_pushOnlySelected);
             EditorGUI.indentLevel++;
             // Get the list of available locales
             var allLocales = phraseProvider.AvailableLocalesRemotely();
@@ -779,7 +779,7 @@ namespace Phrase
             }
 
             EditorGUI.indentLevel--;
-            EditorGUILayout.EndToggleGroup();
+            // EditorGUILayout.EndToggleGroup();
 
             string pushButtonLabel = phraseProvider.m_pushOnlySelected ? "Push selected" : "Push all";
             if (GUILayout.Button(pushButtonLabel))
