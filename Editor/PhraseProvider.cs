@@ -512,6 +512,8 @@ namespace Phrase
                 EditorGUILayout.EndHorizontal();
             }
 
+            filteredProjects = filteredProjects.OrderBy(p => p.name).ToArray();
+
             // Truncate project names more aggressively to control popup width
             string[] projectNames = filteredProjects
                 .Select(p => TruncateWithEllipsis(p.name, 30))
