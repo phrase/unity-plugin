@@ -66,9 +66,6 @@ namespace Phrase
         [SerializeField]
         public bool m_pushOnlySelected = false;
 
-        [SerializeField]
-        public bool m_pullOnlySelected = false;
-
         public string Token => m_UseOauth ? m_OauthToken : m_ApiKey;
 
         private PhraseClient Client => new PhraseClient(this);
@@ -333,7 +330,7 @@ namespace Phrase
                     var selectedLocale = Locales.FirstOrDefault(l => l.code == stringTable.LocaleIdentifier.Code);
                     if (selectedLocale != null)
                     {
-                        if (m_pullOnlySelected && !LocaleIdsToPull.Contains(selectedLocale.id))
+                        if (!LocaleIdsToPull.Contains(selectedLocale.id))
                         {
                             continue;
                         }
@@ -403,6 +400,8 @@ namespace Phrase
 
         bool selectAllLocalesToCreateLocally = false;
         bool selectAllLocalesToCreateRemotely = false;
+
+        bool selectedAllLocalesToPull = true;
         List<string> selectedLocalesToCreateLocally = new List<string>();
         List<string> selectedLocalesToCreateRemotely = new List<string>();
 
@@ -807,6 +806,24 @@ namespace Phrase
 
             if (m_showLocalesToPull)
             {
+                if (EditorGUILayout.ToggleLeft("Select all", selectedAllLocalesToPull, EditorStyles.boldLabel))
+                {
+                    if (!selectedAllLocalesToPull)
+                    {
+                        phraseProvider.LocaleIdsToPull.Clear();
+                        phraseProvider.LocaleIdsToPull.AddRange(phraseProvider.AvailableLocalesLocally().Select(l => l.id));
+                        selectedAllLocalesToPull = true;
+                    }
+                }
+                else
+                {
+                    if (selectedAllLocalesToPull)
+                    {
+                        phraseProvider.LocaleIdsToPull.Clear();
+                        selectedAllLocalesToPull = false;
+                    }
+                }
+
                 foreach (var locale in phraseProvider.AvailableLocalesLocally())
                 {
                     bool selectedState = phraseProvider.LocaleIdsToPull.Contains(locale.id);
@@ -819,6 +836,7 @@ namespace Phrase
                         }
                         else
                         {
+                            selectedAllLocalesToPull = false;
                             phraseProvider.LocaleIdsToPull.Remove(locale.id);
                         }
                     }
