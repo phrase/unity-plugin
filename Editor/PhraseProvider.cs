@@ -402,7 +402,8 @@ namespace Phrase
         bool selectAllLocalesToCreateLocally = false;
         bool selectAllLocalesToCreateRemotely = false;
 
-        bool selectedAllLocalesToPull = true;
+        bool selectedAllLocalesToPull = false;
+
         List<string> selectedLocalesToCreateLocally = new List<string>();
         List<string> selectedLocalesToCreateRemotely = new List<string>();
 
