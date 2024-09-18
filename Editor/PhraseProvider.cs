@@ -397,6 +397,8 @@ namespace Phrase
         bool m_showLocalLocalesMissing = false;
         bool m_showRemoteLocalesMissing = false;
 
+        bool m_showLocalesToPull = false;
+
         static readonly string[] m_environmentOptions = { "EU", "US", "Custom" };
 
         bool selectAllLocalesToCreateLocally = false;
@@ -789,31 +791,39 @@ namespace Phrase
 
         private void ShowPullSection()
         {
-            phraseProvider.m_pullOnlySelected = EditorGUILayout.BeginToggleGroup("Pull only selected locales:", phraseProvider.m_pullOnlySelected);
             EditorGUI.indentLevel++;
-            foreach (var locale in phraseProvider.AvailableLocalesLocally())
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label("Pull Languages");
+            if (GUILayout.Button($"{phraseProvider.LocaleIdsToPull.Count} selected", GUILayout.Width(150)))
             {
-                bool selectedState = phraseProvider.LocaleIdsToPull.Contains(locale.id);
-                bool newSelectedState = EditorGUILayout.ToggleLeft(locale.ToString(), selectedState);
-                if (newSelectedState != selectedState)
-                {
-                    if (newSelectedState)
-                    {
-                        phraseProvider.LocaleIdsToPull.Add(locale.id);
-                    }
-                    else
-                    {
-                        phraseProvider.LocaleIdsToPull.Remove(locale.id);
-                    }
-                }
+                m_showLocalesToPull = !m_showLocalesToPull;
             }
-            EditorGUI.indentLevel--;
 
-            EditorGUILayout.EndToggleGroup();
-            string pullButtonLabel = phraseProvider.m_pullOnlySelected ? "Pull selected" : "Pull all";
-            if (GUILayout.Button(pullButtonLabel))
+            if (GUILayout.Button("Pull to Unity", GUILayout.Width(150)))
             {
                 phraseProvider.PullAll();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            if (m_showLocalesToPull)
+            {
+                foreach (var locale in phraseProvider.AvailableLocalesLocally())
+                {
+                    bool selectedState = phraseProvider.LocaleIdsToPull.Contains(locale.id);
+                    bool newSelectedState = EditorGUILayout.ToggleLeft(locale.ToString(), selectedState);
+                    if (newSelectedState != selectedState)
+                    {
+                        if (newSelectedState)
+                        {
+                            phraseProvider.LocaleIdsToPull.Add(locale.id);
+                        }
+                        else
+                        {
+                            phraseProvider.LocaleIdsToPull.Remove(locale.id);
+                        }
+                    }
+                }
+                EditorGUI.indentLevel--;
             }
         }
 
