@@ -523,8 +523,6 @@ namespace Phrase
                 .Select(p => TruncateWithEllipsis(p.name, 30))
                 .ToArray();
 
-            System.Array.Sort(projectNames);
-
             int selectedProjectIndex = System.Array.IndexOf(filteredProjects, phraseProvider.Projects.FirstOrDefault(p => p.id == phraseProvider.m_selectedProjectId));
 
             // Ensure valid index
