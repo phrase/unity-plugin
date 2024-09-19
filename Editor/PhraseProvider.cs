@@ -30,9 +30,6 @@ namespace Phrase
         [SerializeField]
         public string m_ApiUrl = null;
 
-        [SerializeField]
-        public bool m_UseOauth = false;
-
         [System.NonSerialized]
         public bool m_OauthInProgress = false;
 
@@ -60,12 +57,12 @@ namespace Phrase
         [SerializeField]
         public string m_selectedProjectId = null;
 
-
         [SerializeField]
         public string m_selectedAuthMethod = "Token";
 
+        public bool UseOauth => m_selectedAuthMethod == "OAuth";
 
-        public string Token => m_UseOauth ? m_OauthToken : m_ApiKey;
+        public string Token => UseOauth ? m_OauthToken : m_ApiKey;
 
         private PhraseClient Client => new PhraseClient(this);
 
@@ -100,7 +97,7 @@ namespace Phrase
 
         public async Task<bool> RefreshToken()
         {
-            if (m_UseOauth)
+            if (UseOauth)
             {
                 return await PhraseOauthAuthenticator.RefreshToken();
             }
@@ -473,18 +470,17 @@ namespace Phrase
 
                 EditorGUILayout.BeginHorizontal();
 
-                if (phraseProvider.m_selectedAuthMethod == "Token")
+                if (phraseProvider.UseOauth)
                 {
-                    EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiKey"));
-                }
-                else
-                {
-                    phraseProvider.m_UseOauth = true;
                     string buttonLabel = phraseProvider.m_OauthInProgress ? "Logging in..." : "Log in using OAuth";
                     if (GUILayout.Button(buttonLabel))
                     {
                         PhraseOauthAuthenticator.Authenticate(phraseProvider);
                     }
+                }
+                else
+                {
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiKey"));
                 }
 
                 if (GUILayout.Button("Fetch Projects", GUILayout.Width(95)))
