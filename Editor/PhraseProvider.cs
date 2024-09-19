@@ -808,7 +808,7 @@ namespace Phrase
             EditorGUI.indentLevel++;
             EditorGUILayout.BeginHorizontal();
             GUILayout.Label("Pull Languages");
-            if (GUILayout.Button($"{phraseProvider.LocaleIdsToPull.Count} selected", GUILayout.Width(150)))
+            if (GUILayout.Button($"{phraseProvider.LocaleIdsToPull.Count}/{phraseProvider.AvailableLocalesLocally().Count} selected", GUILayout.Width(150)))
             {
                 m_showLocalesToPull = !m_showLocalesToPull;
             }
