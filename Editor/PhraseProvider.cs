@@ -403,6 +403,7 @@ namespace Phrase
         bool selectAllLocalesToCreateRemotely = false;
 
         bool selectedAllLocalesToPull = false;
+        bool selectedAllLocalesToPush = false;
 
         List<string> selectedLocalesToCreateLocally = new List<string>();
         List<string> selectedLocalesToCreateRemotely = new List<string>();
@@ -796,6 +797,24 @@ namespace Phrase
             EditorGUI.indentLevel++;
             if(m_showLocalesToPush)
             {
+                if (EditorGUILayout.ToggleLeft("Select all", selectedAllLocalesToPush, EditorStyles.boldLabel))
+                {
+                    if (!selectedAllLocalesToPush)
+                    {
+                        phraseProvider.LocaleIdsToPush.Clear();
+                        phraseProvider.LocaleIdsToPush.AddRange(filteredLocales.Select(l => l.Identifier.Code));
+                        selectedAllLocalesToPush = true;
+                    }
+                }
+                else
+                {
+                    if (selectedAllLocalesToPush)
+                    {
+                        phraseProvider.LocaleIdsToPush.Clear();
+                        selectedAllLocalesToPush = false;
+                    }
+                }
+
                 foreach (var locale in filteredLocales)
                 {
                     bool selectedState = phraseProvider.LocaleIdsToPush.Contains(locale.Identifier.Code);
@@ -809,7 +828,7 @@ namespace Phrase
                         }
                         else
                         {
-                            selectedAllLocalesToPull = false;
+                            selectedAllLocalesToPush = false;
                             phraseProvider.LocaleIdsToPush.Remove(locale.Identifier.Code);
                         }
                     }
