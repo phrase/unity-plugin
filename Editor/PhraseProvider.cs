@@ -52,19 +52,18 @@ namespace Phrase
         public List<string> LocaleIdsToPull { get; private set; } = new List<string>();
 
         [SerializeField]
+        public List<string> LocaleIdsToPush { get; private set; } = new List<string>();
+
+        [SerializeField]
         public string m_selectedAccountId = null;
 
         [SerializeField]
         public string m_selectedProjectId = null;
 
-        [SerializeField]
-        public string m_selectedLocaleId = null;
 
         [SerializeField]
         public string m_selectedAuthMethod = "Token";
 
-        [SerializeField]
-        public bool m_pushOnlySelected = false;
 
         public string Token => m_UseOauth ? m_OauthToken : m_ApiKey;
 
@@ -239,9 +238,9 @@ namespace Phrase
                 if (phraseExtension != null)
                 {
                     List<Locale> locales = Locales;
-                    if (m_pushOnlySelected && m_selectedLocaleId != null)
+                    if (LocaleIdsToPush != null)
                     {
-                        locales = Locales.Where(l => l.code == m_selectedLocaleId).ToList();
+                        locales = Locales.Where(l => LocaleIdsToPush.Contains(l.code)).ToList();
                     }
                     int localesIndex = 1;
                     int localesTotal = locales.Count;
@@ -396,6 +395,7 @@ namespace Phrase
         bool m_showRemoteLocalesMissing = false;
 
         bool m_showLocalesToPull = false;
+        bool m_showLocalesToPush = false;
 
         static readonly string[] m_environmentOptions = { "EU", "US", "Custom" };
 
@@ -757,8 +757,6 @@ namespace Phrase
 
         private void ShowPushSection()
         {
-            // phraseProvider.m_pushOnlySelected = EditorGUILayout.BeginToggleGroup("Push only selected locale:", phraseProvider.m_pushOnlySelected);
-            EditorGUI.indentLevel++;
             // Get the list of available locales
             var allLocales = phraseProvider.AvailableLocalesRemotely();
 
@@ -777,30 +775,46 @@ namespace Phrase
                 .ToArray();
 
             string[] availableLocaleNames = filteredLocales.Select(l => l.Identifier.Code).ToArray();
-            int selectedLocaleIndex = System.Array.IndexOf(availableLocaleNames, phraseProvider.m_selectedLocaleId);
 
-            // Ensure valid index
-            if (selectedLocaleIndex == -1 && availableLocaleNames.Length > 0)
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label("Push Languages");
+
+            if(GUILayout.Button($"{phraseProvider.LocaleIdsToPush.Count}/{filteredLocales.Length} selected", GUILayout.Width(150)))
             {
-                selectedLocaleIndex = 0;
+                m_showLocalesToPush = !m_showLocalesToPush;
             }
 
-            selectedLocaleIndex = EditorGUILayout.Popup("Locale", selectedLocaleIndex, availableLocaleNames);
-
-            if (selectedLocaleIndex >= 0 && selectedLocaleIndex < availableLocaleNames.Length)
-            {
-                phraseProvider.m_selectedLocaleId = availableLocaleNames[selectedLocaleIndex];
-            }
-
-            EditorGUI.indentLevel--;
-            // EditorGUILayout.EndToggleGroup();
-
-            string pushButtonLabel = phraseProvider.m_pushOnlySelected ? "Push selected" : "Push all";
-            if (GUILayout.Button(pushButtonLabel))
+            if (GUILayout.Button("Push to Phrase", GUILayout.Width(150)))
             {
                 EditorCoroutineUtility.StartCoroutineOwnerless(phraseProvider.PushAll(PhraseProvider.ConnectedStringTableCollections()));
                 // phraseProvider.PushAll();
             }
+
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUI.indentLevel++;
+            if(m_showLocalesToPush)
+            {
+                foreach (var locale in filteredLocales)
+                {
+                    bool selectedState = phraseProvider.LocaleIdsToPush.Contains(locale.Identifier.Code);
+                    bool newSelectedState = EditorGUILayout.ToggleLeft(locale.ToString(), selectedState);
+
+                    if (newSelectedState != selectedState)
+                    {
+                        if (newSelectedState)
+                        {
+                            phraseProvider.LocaleIdsToPush.Add(locale.Identifier.Code);
+                        }
+                        else
+                        {
+                            selectedAllLocalesToPull = false;
+                            phraseProvider.LocaleIdsToPush.Remove(locale.Identifier.Code);
+                        }
+                    }
+                }
+            }
+            EditorGUI.indentLevel--;
         }
 
         private void ShowPullSection()
