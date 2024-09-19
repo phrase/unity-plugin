@@ -386,7 +386,6 @@ namespace Phrase
     public class PhraseProviderEditor : Editor
     {
         bool m_showTables = false;
-        bool m_showTablesSection = false;
 
         bool m_showConnection = false;
 
@@ -714,36 +713,31 @@ namespace Phrase
 
         private void ShowConnectedTablesSection()
         {
-            m_showTablesSection = EditorGUILayout.BeginFoldoutHeaderGroup(m_showTablesSection, "Connected string tables");
-            if (m_showTablesSection)
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label("String tables");
+            List<StringTableCollection> allCollections = PhraseProvider.AllStringTableCollections();
+            int connectedCollections = PhraseProvider.ConnectedStringTableCollections().Count;
+            if(GUILayout.Button($"{connectedCollections}/{allCollections.Count} connected", GUILayout.MaxWidth(303)))
             {
-                EditorGUILayout.BeginHorizontal();
-                GUILayout.Label("Selected tables");
-                List<StringTableCollection> allCollections = PhraseProvider.AllStringTableCollections();
-                int connectedCollections = PhraseProvider.ConnectedStringTableCollections().Count;
-                if(GUILayout.Button($"{connectedCollections} selected", GUILayout.Width(305)))
-                {
-                    m_showTables = !m_showTables;
-                }
-                EditorGUILayout.EndHorizontal();
+                m_showTables = !m_showTables;
+            }
+            EditorGUILayout.EndHorizontal();
 
-                EditorGUI.indentLevel++;
-                if (m_showTables)
+            EditorGUI.indentLevel++;
+            if (m_showTables)
+            {
+                foreach (StringTableCollection collection in allCollections)
                 {
-                    foreach (StringTableCollection collection in allCollections)
+                    var extension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
+                    bool selectedState = extension != null && extension.m_provider != null;
+                    bool newSelectedState = EditorGUILayout.ToggleLeft(collection.name, selectedState);
+                    if (newSelectedState != selectedState)
                     {
-                        var extension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
-                        bool selectedState = extension != null && extension.m_provider != null;
-                        bool newSelectedState = EditorGUILayout.ToggleLeft(collection.name, selectedState);
-                        if (newSelectedState != selectedState)
-                        {
-                            TogglePhraseExtension(collection, newSelectedState);
-                        }
+                        TogglePhraseExtension(collection, newSelectedState);
                     }
                 }
-                EditorGUI.indentLevel--;
             }
-            EditorGUILayout.EndFoldoutHeaderGroup();
+            EditorGUI.indentLevel--;
         }
 
         private void ShowPushPullSection()
