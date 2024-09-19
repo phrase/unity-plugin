@@ -156,7 +156,7 @@ namespace Phrase
         }
         if (!string.IsNullOrEmpty(metadata.ScreenshotUrl))
         {
-          if (GUILayout.Button("Open Screenshot"))
+          if (GUILayout.Button("Open Screenshot", GUILayout.Width(150)))
           {
             Application.OpenURL(metadata.ScreenshotUrl);
           }
