@@ -728,6 +728,7 @@ namespace Phrase
                 }
                 EditorGUILayout.EndHorizontal();
 
+                EditorGUI.indentLevel++;
                 if (m_showTables)
                 {
                     foreach (StringTableCollection collection in allCollections)
@@ -741,7 +742,7 @@ namespace Phrase
                         }
                     }
                 }
-
+                EditorGUI.indentLevel--;
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
         }
