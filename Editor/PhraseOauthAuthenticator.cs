@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using UnityEngine;
+using UnityEditor;
 
 namespace Phrase
 {
@@ -53,7 +54,7 @@ namespace Phrase
 
         private static readonly int OauthTimeout = 5*60*1000; // 5 minutes
         private static readonly string redirectUrl = $"{listenUrl}/callback";
-        private static string pageSuccess =
+        private static readonly string pageSuccess =
 @"<html>
   <head>
     <title>Authorization successful</title>
@@ -84,10 +85,6 @@ namespace Phrase
 
         private static readonly string challengeMethod = "S256";
 
-        private static PhraseAuthTokenResponse? authTokenResponse = null;
-
-        private static string organizationId = null;
-
         private static void HandleAuthorizationCodeFlow()
         {
             codeVerifier = GenerateRandomString(64);
@@ -115,15 +112,15 @@ namespace Phrase
             return JsonUtility.FromJson<PhraseAuthTokenResponse>(jsonResponse);
         }
 
-        private static async Task<PhraseAuthTokenResponse> RefreshAuthToken(string refreshToken)
+        private static async Task<PhraseAuthTokenResponse> RefreshAuthToken()
         {
-            provider.Log($"Refreshing token from refresh token {refreshToken}");
+            provider.Log($"Refreshing token from refresh token {provider.m_OauthRefreshToken}");
             var httpClient = new HttpClient();
             var content = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("client_id", clientId),
                 new KeyValuePair<string, string>("grant_type", "refresh_token"),
-                new KeyValuePair<string, string>("refresh_token", refreshToken)
+                new KeyValuePair<string, string>("refresh_token", provider.m_OauthRefreshToken)
             });
 
             var response = await httpClient.PostAsync($"{BaseUrl}/idm/oauth/token", content);
@@ -200,10 +197,13 @@ namespace Phrase
                     string code = Regex.Match(req.Url.Query, "code=([^&]*)").Groups[1].Value;
                     if (code != "")
                     {
-                        authTokenResponse = await GetAccessToken(code);
-                        var userResponse = await GetUser(authTokenResponse.Value.access_token);
-                        organizationId = userResponse.lastOrganization.uid;
-                        await RefreshToken();
+                        var authTokenResponse = await GetAccessToken(code);
+                        provider.m_OauthRefreshToken = authTokenResponse.refresh_token;
+                        var userResponse = await GetUser(authTokenResponse.access_token);
+                        provider.m_OauthOrganizationId = userResponse.lastOrganization.uid;
+                        var appTokenResponse = await GetAppToken(authTokenResponse.access_token, provider.m_OauthOrganizationId);
+                        provider.SetOauthToken(appTokenResponse.accessToken);
+                        EditorUtility.SetDirty(provider);
                         SendPageContent(ctx.Response, pageSuccess);
                         runServer = false;
                         provider.Log("Closing server...");
@@ -218,17 +218,20 @@ namespace Phrase
             }
         }
 
-        public static async Task<bool> RefreshToken()
+        public static async Task<bool> RefreshToken(PhraseProvider provider)
         {
-            if (authTokenResponse == null || organizationId == null)
+            PhraseOauthAuthenticator.provider = provider;
+            if (provider.m_OauthRefreshToken == null || provider.m_OauthOrganizationId == null)
             {
-                provider.Log("No access token or organization id found");
+                provider.Log("No refresh token or organization id found");
                 return false;
             }
-            authTokenResponse = await RefreshAuthToken(authTokenResponse.Value.refresh_token);
-            var appTokenResponse = await GetAppToken(authTokenResponse.Value.access_token, organizationId);
+            var authTokenResponse = await RefreshAuthToken();
+            provider.m_OauthRefreshToken = authTokenResponse.refresh_token;
+            var appTokenResponse = await GetAppToken(authTokenResponse.access_token, provider.m_OauthOrganizationId);
             provider.Log($"Token: {appTokenResponse.accessToken}");
             provider.SetOauthToken(appTokenResponse.accessToken);
+            EditorUtility.SetDirty(provider);
             return true;
         }
 
