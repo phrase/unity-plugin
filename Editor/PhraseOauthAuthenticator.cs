@@ -84,7 +84,7 @@ namespace Phrase
 
         private static readonly string challengeMethod = "S256";
 
-        private static string accessToken = null;
+        private static PhraseAuthTokenResponse? authTokenResponse = null;
 
         private static string organizationId = null;
 
@@ -93,7 +93,7 @@ namespace Phrase
             codeVerifier = GenerateRandomString(64);
             var codeChallenge = GenerateCodeChallenge(codeVerifier);
 
-            Application.OpenURL($"{BaseUrl}/idm/openid/authorize?response_type=code&scope=openid%20sso&client_id={clientId}&code_challenge_method={challengeMethod}&code_challenge={codeChallenge}&redirect_uri={redirectUrl}&login_hint=__idm__");
+            Application.OpenURL($"{BaseUrl}/idm/openid/authorize?response_type=code&scope=openid%20sso%20offline_access&client_id={clientId}&code_challenge_method={challengeMethod}&code_challenge={codeChallenge}&redirect_uri={redirectUrl}&login_hint=__idm__");
         }
 
         private static async Task<PhraseAuthTokenResponse> GetAccessToken(string code)
@@ -111,6 +111,23 @@ namespace Phrase
 
             var response = await httpClient.PostAsync($"{BaseUrl}/idm/oauth/token", content);
             var jsonResponse =  await response.Content.ReadAsStringAsync();
+            provider.Log($"Response: {jsonResponse}");
+            return JsonUtility.FromJson<PhraseAuthTokenResponse>(jsonResponse);
+        }
+
+        private static async Task<PhraseAuthTokenResponse> RefreshAuthToken(string refreshToken)
+        {
+            provider.Log($"Refreshing token from refresh token {refreshToken}");
+            var httpClient = new HttpClient();
+            var content = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("client_id", clientId),
+                new KeyValuePair<string, string>("grant_type", "refresh_token"),
+                new KeyValuePair<string, string>("refresh_token", refreshToken)
+            });
+
+            var response = await httpClient.PostAsync($"{BaseUrl}/idm/oauth/token", content);
+            var jsonResponse = await response.Content.ReadAsStringAsync();
             provider.Log($"Response: {jsonResponse}");
             return JsonUtility.FromJson<PhraseAuthTokenResponse>(jsonResponse);
         }
@@ -183,9 +200,8 @@ namespace Phrase
                     string code = Regex.Match(req.Url.Query, "code=([^&]*)").Groups[1].Value;
                     if (code != "")
                     {
-                        var accessTokenResponse = await GetAccessToken(code);
-                        accessToken = accessTokenResponse.access_token;
-                        var userResponse = await GetUser(accessToken);
+                        authTokenResponse = await GetAccessToken(code);
+                        var userResponse = await GetUser(authTokenResponse.Value.access_token);
                         organizationId = userResponse.lastOrganization.uid;
                         await RefreshToken();
                         SendPageContent(ctx.Response, pageSuccess);
@@ -204,12 +220,13 @@ namespace Phrase
 
         public static async Task<bool> RefreshToken()
         {
-            if (accessToken == null || organizationId == null)
+            if (authTokenResponse == null || organizationId == null)
             {
                 provider.Log("No access token or organization id found");
                 return false;
             }
-            var appTokenResponse = await GetAppToken(accessToken, organizationId);
+            authTokenResponse = await RefreshAuthToken(authTokenResponse.Value.refresh_token);
+            var appTokenResponse = await GetAppToken(authTokenResponse.Value.access_token, organizationId);
             provider.Log($"Token: {appTokenResponse.accessToken}");
             provider.SetOauthToken(appTokenResponse.accessToken);
             return true;
