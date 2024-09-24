@@ -900,6 +900,7 @@ namespace Phrase
                     collection.RemoveExtension(extension);
                 }
             }
+            EditorUtility.SetDirty(collection);
         }
 
         private string GetLoadingMessage()
