@@ -44,13 +44,13 @@ namespace Phrase
 
         public string m_ApiKey;
 
-        public List<Project> Projects { get; private set; } = new List<Project>();
+        public List<Project> Projects = new();
 
-        public List<Locale> Locales { get; private set; } = new List<Locale>();
+        public List<Locale> Locales = new();
 
-        public List<string> LocaleIdsToPull { get; private set; } = new List<string>();
+        public List<string> LocaleIdsToPull = new();
 
-        public List<string> LocaleIdsToPush { get; private set; } = new List<string>();
+        public List<string> LocaleIdsToPush = new();
 
         public string m_selectedAccountId = null;
 

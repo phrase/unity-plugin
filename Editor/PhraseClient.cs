@@ -82,14 +82,14 @@ namespace Phrase
         }
 
         [Serializable]
-        public class Account
+        public struct Account
         {
             public string id;
             public string name;
         }
 
         [Serializable]
-        public class Project
+        public struct Project
         {
             public string id;
             public string name;
