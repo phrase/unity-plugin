@@ -14,3 +14,9 @@ as a dependency, if not already installed.
 If you want to contribute, check out this project directly into `Packages`
 directory of your project and rename the package directory to
 `com.phrase.plugin`. You can also create a symlink to it instead.
+
+### Publishing a new release
+
+* Increase version number in `package.json` and `Editor/PhraseClient.cs`
+* Update `CHANGELOG.md`
+* Publish the release on the Asset Store

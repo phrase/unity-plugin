@@ -60,11 +60,11 @@ namespace Phrase
 
     public class PhraseClient
     {
+        private readonly string Version = "1.0.0";
+
         private readonly PhraseProvider Provider;
 
         private string ApiUrl => Provider.m_ApiUrl;
-
-        private string AccessToken => Provider.Token;
 
         private HttpClient Client;
 
@@ -102,7 +102,7 @@ namespace Phrase
             public string id;
             public string screenshot_url;
         }
-        
+
         public class ScreenshotMarker
         {
             public string id;
@@ -120,7 +120,7 @@ namespace Phrase
             this.Provider = provider;
             this.Client = new HttpClient(new RetryHandler(new HttpClientHandler(), provider));
             // Client.DefaultRequestHeaders.Add("Authorization", "Bearer " + AccessToken);
-            Client.DefaultRequestHeaders.Add("User-Agent", "Unity Plugin/1.0");
+            Client.DefaultRequestHeaders.Add("User-Agent", $"Unity Plugin/{Version}");
             Client.BaseAddress = new Uri(ApiUrl);
         }
 
