@@ -21,50 +21,48 @@ using static Phrase.PhraseClient;
 
 namespace Phrase
 {
+    [System.Serializable]
+    public enum AuthType
+    {
+        Token,
+        Oauth
+    }
+
     [CreateAssetMenu(fileName = "Phrase", menuName = "Localization/Phrase")]
     public partial class PhraseProvider : ScriptableObject
     {
-        [SerializeField]
         public string m_Environment = "EU";
 
-        [SerializeField]
         public string m_ApiUrl = null;
 
         [System.NonSerialized]
         public bool m_OauthInProgress = false;
 
-        [SerializeField]
         public string m_OauthToken = null;
+        public string m_OauthRefreshToken = null;
+        public string m_OauthOrganizationId = null;
 
-        [SerializeField]
         public string m_ApiKey;
 
-        [SerializeField]
         public List<Project> Projects { get; private set; } = new List<Project>();
 
-        [SerializeField]
         public List<Locale> Locales { get; private set; } = new List<Locale>();
 
-        [SerializeField]
         public List<string> LocaleIdsToPull { get; private set; } = new List<string>();
 
-        [SerializeField]
         public List<string> LocaleIdsToPush { get; private set; } = new List<string>();
 
-        [SerializeField]
         public string m_selectedAccountId = null;
 
-        [SerializeField]
         public string m_selectedProjectId = null;
 
-        [SerializeField]
-        public string m_selectedAuthMethod = "Token";
+        public AuthType m_authenticationType = AuthType.Token;
 
-        public bool UseOauth => m_selectedAuthMethod == "OAuth";
+        public bool UseOauth => m_authenticationType == AuthType.Oauth;
 
         public string Token => UseOauth ? m_OauthToken : m_ApiKey;
 
-        private PhraseClient Client => new PhraseClient(this);
+        private PhraseClient Client => new(this);
 
         private string StringsAppHost => m_Environment switch
         {
@@ -99,7 +97,7 @@ namespace Phrase
         {
             if (UseOauth)
             {
-                return await PhraseOauthAuthenticator.RefreshToken();
+                return await PhraseOauthAuthenticator.RefreshToken(this);
             }
             return false;
         }
@@ -124,7 +122,7 @@ namespace Phrase
         public void FetchProjects()
         {
             EditorCoroutineUtility.StartCoroutineOwnerless(FetchProjectsAsync());
-            FetchLocales();
+            // FetchLocales();
         }
 
         public IEnumerator FetchLocalesAsync()
@@ -448,7 +446,7 @@ namespace Phrase
                 phraseProvider.m_Environment = m_environmentOptions[EditorGUILayout.Popup("Environment", System.Array.IndexOf(m_environmentOptions, phraseProvider.m_Environment), m_environmentOptions)];
                 if (phraseProvider.m_Environment == "Custom")
                 {
-                    phraseProvider.m_ApiUrl = EditorGUILayout.TextField("API URL", phraseProvider.m_ApiUrl);
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("m_ApiUrl"));
                 }
                 else
                 {
@@ -463,11 +461,7 @@ namespace Phrase
                     }
                 }
 
-                string[] authOptions = new string[] {"Token", "OAuth"};
-                int authOptionIndex = System.Array.IndexOf(authOptions, phraseProvider.m_selectedAuthMethod);
-                authOptionIndex = EditorGUILayout.Popup("Authentication type", authOptionIndex, authOptions);
-                phraseProvider.m_selectedAuthMethod = authOptions[authOptionIndex];
-
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("m_authenticationType"));
                 EditorGUILayout.BeginHorizontal();
 
                 if (phraseProvider.UseOauth)
