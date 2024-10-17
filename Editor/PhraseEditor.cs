@@ -5,9 +5,11 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Localization;
 using UnityEngine.Localization.Components;
+using UnityEngine.Localization.Tables;
+#if ENABLE_PROPERTY_VARIANTS
 using UnityEngine.Localization.PropertyVariants;
 using UnityEngine.Localization.PropertyVariants.TrackedProperties;
-using UnityEngine.Localization.Tables;
+#endif
 
 namespace Phrase
 {
@@ -28,6 +30,7 @@ namespace Phrase
         return localizeStringEvent.StringReference;
       }
 
+#if ENABLE_PROPERTY_VARIANTS
       var gameObjectLocalizer = gameObject.GetComponentInParent<GameObjectLocalizer>();
       if (gameObjectLocalizer != null)
       {
@@ -41,6 +44,7 @@ namespace Phrase
           }
         }
       }
+#endif
 
       return null;
     }

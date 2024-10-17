@@ -44,13 +44,13 @@ namespace Phrase
 
         public string m_ApiKey;
 
-        public List<Project> Projects = new();
+        public List<Project> Projects = new List<Project>();
 
-        public List<Locale> Locales = new();
+        public List<Locale> Locales = new List<Locale>();
 
-        public List<string> LocaleIdsToPull = new();
+        public List<string> LocaleIdsToPull = new List<string>();
 
-        public List<string> LocaleIdsToPush = new();
+        public List<string> LocaleIdsToPush = new List<string>();
 
         public string m_selectedAccountId = null;
 
@@ -62,14 +62,23 @@ namespace Phrase
 
         public string Token => UseOauth ? m_OauthToken : m_ApiKey;
 
-        private PhraseClient Client => new(this);
+        private PhraseClient Client => new PhraseClient(this);
 
-        private string StringsAppHost => m_Environment switch
+        private string StringsAppHost
         {
-            "EU" => "https://app.phrase.com",
-            "US" => "https://us.app.phrase.com",
-            _ => Regex.IsMatch(m_ApiUrl, "localhost:3000") ? "http://localhost:3000" : "https://app.phrase-qa.com",
-        };
+            get
+            {
+                switch (m_Environment)
+                {
+                    case "EU":
+                        return "https://app.phrase.com";
+                    case "US":
+                        return "https://us.app.phrase.com";
+                    default:
+                        return Regex.IsMatch(m_ApiUrl, "localhost:3000") ? "http://localhost:3000" : "https://app.phrase-qa.com";
+                }
+            }
+        }
 
         public void Log(string message)
         {
