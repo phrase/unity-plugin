@@ -1,6 +1,6 @@
 {
   "name": "com.phrase.plugin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "Phrase Localization Plugin",
   "description": "This package provides synchronization with Phrase Strings localization service.",
   "unity": "2019.1",
