@@ -131,7 +131,7 @@ namespace Phrase
             {
                 url += "&tags=" + HttpUtility.UrlEncode(tag);
             }
-            using HttpResponseMessage response = await Client.GetAsync(url);
+            HttpResponseMessage response = await Client.GetAsync(url);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync();
         }
@@ -140,7 +140,7 @@ namespace Phrase
         public async void UpdateLocalesList(string projectID, List<Locale> locales)
         {
             string url = string.Format("projects/{0}/locales", projectID);
-            using HttpResponseMessage response = await Client.GetAsync(url);
+            HttpResponseMessage response = await Client.GetAsync(url);
             response.EnsureSuccessStatusCode();
             string jsonResponse = await response.Content.ReadAsStringAsync();
             locales.Clear();
@@ -163,7 +163,7 @@ namespace Phrase
 
             do
             {
-                using HttpResponseMessage response = await Client.GetAsync($"projects?per_page=100&page={page}");
+                HttpResponseMessage response = await Client.GetAsync($"projects?per_page=100&page={page}");
                 response.EnsureSuccessStatusCode();
                 string jsonResponse = await response.Content.ReadAsStringAsync();
                 currentBatch = JsonConvert.DeserializeObject<List<Project>>(jsonResponse);
@@ -231,7 +231,7 @@ namespace Phrase
         public async Task<Key> GetKey(string projectID, string keyName)
         {
             string url = string.Format($"projects/{{0}}/keys?q=name:{Uri.EscapeDataString(keyName)}", projectID);
-            using HttpResponseMessage response = await Client.GetAsync(url);
+            HttpResponseMessage response = await Client.GetAsync(url);
             response.EnsureSuccessStatusCode();
             string jsonResponse = await response.Content.ReadAsStringAsync();
             List<Key> keys = JsonConvert.DeserializeObject<List<Key>>(jsonResponse);
