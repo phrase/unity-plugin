@@ -1,3 +1,6 @@
+// Uncomment the following line when publishing the plugin to the Asset Store
+//#define PHRASE_VS_ATTRIBUTION
+
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -18,6 +21,9 @@ using UnityEngine.Localization.Settings;
 using Unity.EditorCoroutines.Editor;
 
 using static Phrase.PhraseClient;
+#if PHRASE_VS_ATTRIBUTION
+using static Phrase.VSAttribution.VSAttribution;
+#endif
 
 namespace Phrase
 {
@@ -540,6 +546,9 @@ namespace Phrase
                     phraseProvider.m_selectedProjectId = selectedProject.id;
                     phraseProvider.m_selectedAccountId = selectedProject.account.id;
                     phraseProvider.FetchLocales();
+                    #if PHRASE_VS_ATTRIBUTION
+                    SendAttributionEvent("ProjectAccess", "Phrase", phraseProvider.m_selectedAccountId);
+                    #endif
                 }
             }
         }
