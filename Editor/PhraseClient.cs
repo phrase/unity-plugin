@@ -129,7 +129,7 @@ namespace Phrase
             string url = string.Format("projects/{0}/locales/{1}/download?file_format=csv&format_options%5Bexport_max_characters_allowed%5D=true&format_options%5Bexport_key_id%5D=true&include_empty_translations=true", projectID, localeID);
             if (tag != null)
             {
-                url += "&tags=" + HttpUtility.UrlEncode(tag);
+                url += "&tags=" + Uri.EscapeDataString(tag);
             }
             HttpResponseMessage response = await Client.GetAsync(url);
             response.EnsureSuccessStatusCode();
