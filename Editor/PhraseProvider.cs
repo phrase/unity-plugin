@@ -275,7 +275,7 @@ namespace Phrase
                             string keyPrefix = phraseExtension.m_identifierType == TableIdentifierType.KeyPrefix ? phraseExtension.m_identifier : null;
                             Csv.Export(stream, collection, ColumnMappings(locale, keyPrefix));
                         }
-                        Client.UploadFile(path, m_selectedProjectId, locale.id, locale.code, false, tag);
+                        Client.UploadFile(path, m_selectedProjectId, locale.id, locale.name, false, tag);
                         if (File.Exists(path)) File.Delete(path);
                     }
                 }
@@ -299,7 +299,7 @@ namespace Phrase
                 },
                 new LocaleColumns {
                     LocaleIdentifier = locale.code,
-                    FieldName = locale.code
+                    FieldName = locale.name
                 },
             };
         }

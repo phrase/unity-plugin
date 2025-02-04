@@ -173,7 +173,7 @@ namespace Phrase
             } while (currentBatch.Count == 100);  // Continue if a full batch is returned
         }
 
-        public async void UploadFile(string path, string projectID, string localeID, string localeCode, bool autoTranslate, string tag)
+        public async void UploadFile(string path, string projectID, string localeID, string localeName, bool autoTranslate, string tag)
         {
             string url = string.Format("projects/{0}/uploads", projectID);
             NameValueCollection nvc = new NameValueCollection
@@ -182,7 +182,7 @@ namespace Phrase
                 { "file_format", "csv" },
                 { "update_descriptions", "true" },
                 { "update_translations", "true" },
-                { $"locale_mapping[{localeCode}]", "4" },
+                { $"locale_mapping[{localeName}]", "4" },
                 { "format_options[key_index]", "1" },
                 { "format_options[comment_index]", "2" },
                 { "format_options[max_characters_allowed_column]", "3" },
