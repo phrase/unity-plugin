@@ -441,8 +441,6 @@ namespace Phrase
             serializedObject.ApplyModifiedProperties();
         }
 
-        private string selectedProjectName;
-
         private string TruncateWithEllipsis(string input, int maxLength)
         {
             if (string.IsNullOrEmpty(input) || input.Length <= maxLength)
@@ -540,9 +538,8 @@ namespace Phrase
             if (selectedProjectIndex >= 0 && selectedProjectIndex < filteredProjects.Length)
             {
                 var selectedProject = filteredProjects[selectedProjectIndex];
-                if (selectedProjectName != selectedProject.name)
+                if (phraseProvider.m_selectedProjectId != selectedProject.id)
                 {
-                    selectedProjectName = selectedProject.name;
                     phraseProvider.m_selectedProjectId = selectedProject.id;
                     phraseProvider.m_selectedAccountId = selectedProject.account.id;
                     phraseProvider.FetchLocales();
