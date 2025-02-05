@@ -70,6 +70,11 @@ namespace Phrase
 
         private PhraseClient Client => new PhraseClient(this);
 
+        void OnEnable()
+        {
+            LocalizationSettings.InitializationOperation.WaitForCompletion();
+        }
+
         private string StringsAppHost
         {
             get
@@ -131,6 +136,7 @@ namespace Phrase
             yield return new WaitForEndOfFrame();
 
             Client.UpdateProjectsList(Projects);
+            EditorUtility.SetDirty(this);
             IsLoadingProjects = false;
         }
 
@@ -151,6 +157,7 @@ namespace Phrase
             Client.UpdateLocalesList(m_selectedProjectId, Locales);
             LocalizationSettings.InitializationOperation.WaitForCompletion();
             LocaleIdsToPull.Clear();
+            EditorUtility.SetDirty(this);
             IsLoadingLocales = false;
         }
 
@@ -597,7 +604,7 @@ namespace Phrase
                                 continue;
                             }
                             UnityEngine.Localization.Locale newLocale = UnityEngine.Localization.Locale.CreateLocale(locale.code);
-                            AssetDatabase.CreateAsset(newLocale, $"{pathToSave}/{newLocale.ToString()}.asset");
+                            AssetDatabase.CreateAsset(newLocale, $"{pathToSave}/{newLocale}.asset");
                             count++;
                         }
                         LocalizationSettings.InitializationOperation.WaitForCompletion();
@@ -801,6 +808,7 @@ namespace Phrase
                         phraseProvider.LocaleIdsToPush.Clear();
                         phraseProvider.LocaleIdsToPush.AddRange(filteredLocales.Select(l => l.Identifier.Code));
                         selectedAllLocalesToPush = true;
+                        EditorUtility.SetDirty(target);
                     }
                 }
                 else
@@ -809,6 +817,7 @@ namespace Phrase
                     {
                         phraseProvider.LocaleIdsToPush.Clear();
                         selectedAllLocalesToPush = false;
+                        EditorUtility.SetDirty(target);
                     }
                 }
 
@@ -828,6 +837,7 @@ namespace Phrase
                             selectedAllLocalesToPush = false;
                             phraseProvider.LocaleIdsToPush.Remove(locale.Identifier.Code);
                         }
+                        EditorUtility.SetDirty(target);
                     }
                 }
             }
@@ -859,6 +869,7 @@ namespace Phrase
                         phraseProvider.LocaleIdsToPull.Clear();
                         phraseProvider.LocaleIdsToPull.AddRange(phraseProvider.AvailableLocalesLocally().Select(l => l.id));
                         selectedAllLocalesToPull = true;
+                        EditorUtility.SetDirty(target);
                     }
                 }
                 else
@@ -867,6 +878,7 @@ namespace Phrase
                     {
                         phraseProvider.LocaleIdsToPull.Clear();
                         selectedAllLocalesToPull = false;
+                        EditorUtility.SetDirty(target);
                     }
                 }
 
@@ -885,6 +897,7 @@ namespace Phrase
                             selectedAllLocalesToPull = false;
                             phraseProvider.LocaleIdsToPull.Remove(locale.id);
                         }
+                        EditorUtility.SetDirty(target);
                     }
                 }
                 EditorGUI.indentLevel--;
