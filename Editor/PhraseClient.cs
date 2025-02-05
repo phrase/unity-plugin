@@ -124,12 +124,16 @@ namespace Phrase
             Client.BaseAddress = new Uri(ApiUrl);
         }
 
-        public async Task<string> DownloadLocale(string projectID, string localeID, string tag)
+        public async Task<string> DownloadLocale(string projectID, string localeID, string tag, string keyPrefix)
         {
             string url = string.Format("projects/{0}/locales/{1}/download?file_format=csv&format_options%5Bexport_max_characters_allowed%5D=true&format_options%5Bexport_key_id%5D=true&include_empty_translations=true", projectID, localeID);
             if (tag != null)
             {
-                url += "&tags=" + Uri.EscapeDataString(tag);
+                url += "&tags=" + WebUtility.UrlEncode(tag);
+            }
+            if (keyPrefix != null)
+            {
+                url += "&filter_by_prefix=true&translation_key_prefix=" + WebUtility.UrlEncode(keyPrefix);
             }
             HttpResponseMessage response = await Client.GetAsync(url);
             response.EnsureSuccessStatusCode();
@@ -230,7 +234,7 @@ namespace Phrase
 
         public async Task<Key> GetKey(string projectID, string keyName)
         {
-            string url = string.Format($"projects/{{0}}/keys?q=name:{Uri.EscapeDataString(keyName)}", projectID);
+            string url = string.Format($"projects/{{0}}/keys?q=name:{WebUtility.UrlEncode(keyName)}", projectID);
             HttpResponseMessage response = await Client.GetAsync(url);
             response.EnsureSuccessStatusCode();
             string jsonResponse = await response.Content.ReadAsStringAsync();
