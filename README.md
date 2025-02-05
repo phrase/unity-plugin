@@ -37,13 +37,19 @@ You can perform push/pull from Phrase Provider screen, but also from “Phrase E
 
 ![Phrase Extension on a String Table Collection](docs/phrase_extension.png)
 
-There you push/pull only the target table. This extension also enables you to constrain the subset of keys that will be pushed/pulled to the particular table, by selecting the “Identifyer Type”:
+There you push/pull only from/to the table in question.
 
-* “Key Prefix” – only keys with the given prefix in their names will be imported to the target table.
+### Working with multiple String Table Collections
 
-* “Tag” – only keys with matching tag will be imported to the target table. Upon pushing, all keys from this table will get this tag assigned.
+It's common that a user might organize their translations into multiple String Table Collections, for example based on the game section or the type of the items referred to (e.g. Weapons, Items, Characters etc). In that case one would want to connect the collection with only a subset of all existing [translation keys](https://support.phrase.com/hc/en-us/articles/5784119185436-Keys-Strings) in Phrase Strings. For this purpose, you can use key name prefixes or [key tags](https://support.phrase.com/hc/en-us/articles/5822598372252-Tags-Strings).
 
-* “None” – all keys will be imported to the target table.
+You can constrain the subset of keys that will be pushed/pulled to the particular table, by selecting the “Identifyer Type” in the Collection Extension:
+
+* “Key Prefix” – only keys with the given prefix in their names will be imported (pull) to the target table. The Unity key names will not contain the prefix itself. On push, the whole table will get uploaded to Phrase, and prefix will be automatically appended to the key names.
+
+* “Tag” – only keys with matching tag will be pulled to the target table. Upon pushing, all keys from this table will get this tag assigned.
+
+* “None” – all Phrase keys will be imported to the target table on pull (this is typical when you have only a single Collection connected with Phrase).
 
 ### Phrase window
 

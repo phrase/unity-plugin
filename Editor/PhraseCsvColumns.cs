@@ -74,6 +74,8 @@ namespace Phrase
         public override void WriteRow(SharedTableData.SharedTableEntry keyEntry, IList<StringTableEntry> tableEntries, CsvWriter writer)
         {
             string keyName = keyEntry.Key;
+            if (!string.IsNullOrEmpty(m_KeyPrefix))
+                keyName = m_KeyPrefix + keyName;
             writer.WriteField(keyName);
 
             var metadata = keyEntry.Metadata.GetMetadata<PhraseMetadata>();
@@ -101,11 +103,6 @@ namespace Phrase
             string keyName = reader.GetField(m_KeyNameIndex);
             if (string.IsNullOrEmpty(keyName))
                 return null;
-            if (!string.IsNullOrEmpty(m_KeyPrefix))
-            {
-                if (!keyName.StartsWith(m_KeyPrefix))
-                    return null;
-            }
             return m_SharedTableData.GetEntry(keyName) ?? m_SharedTableData.AddKey(keyName);
         }
     }

@@ -316,10 +316,10 @@ namespace Phrase
             Log("Downloading locale " + selectedLocale.code);
             var phraseExtension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
             string tag = phraseExtension.m_identifierType == TableIdentifierType.Tag ? phraseExtension.m_identifier : null;
-            var csvContent = await Client.DownloadLocale(m_selectedProjectId, selectedLocale.id, tag);
+            string keyPrefix = phraseExtension.m_identifierType == TableIdentifierType.KeyPrefix ? phraseExtension.m_identifier : null;
+            var csvContent = await Client.DownloadLocale(m_selectedProjectId, selectedLocale.id, tag, keyPrefix);
             using (var reader = new StringReader(csvContent))
             {
-                string keyPrefix = phraseExtension.m_identifierType == TableIdentifierType.KeyPrefix ? phraseExtension.m_identifier : null;
                 var columnMappings = ColumnMappings(selectedLocale, keyPrefix);
                 Csv.ImportInto(reader, collection, columnMappings);
             }
