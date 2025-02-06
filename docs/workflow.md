@@ -13,22 +13,23 @@ Here's the description of the processes/steps that you will be doing once and th
 ### Set up Phrase account and a project
 
 * Sign up on Phrase Strings
-* Create a project
-* Create an API key
+* Create a [project](https://support.phrase.com/hc/en-us/articles/5784094677404-Projects-Strings)
+* [Create an API key](https://support.phrase.com/hc/en-us/articles/5808341130268-Generate-API-Access-Token-Strings)
 
 ### Set up Phrase plugin
 
-* Install the plugin
-* Create Phrase provider asset
+* Install the plugin as described in the [README](../README.md)
+* Create Phrase provider asset as described in the [Usage](usage.md) document
 * Connect to Phrase using your API key
-* Choose the project
-* Create the missing locales
+* Choose your project
+* Create the missing locales: if the list of locales in Unity doesn't match the list on Phrase, you'll be able to create missing ones on either side
 * Choose which locales you want to push and which to pull: one possible approach is to maintain the source locale in Unity and push it to Phrase, and pull the target locales from Phrase to Unity when they are translated
 * Connect the string tables
 
 ## Regularly
 
-* Push translations to Phrase
-  * Add metadata such as description and maximum character length
+* Add new keys to your string tables, together with their translations in the source locale
+* Add metadata such as description and maximum character length by using the [Phrase window](usage.md#phrase-window) or editing the metadata in the String Table Collection editor
+* Push translations to Phrase. It will create all the missing keys in Phrase and update the translations
 * Pull translations from Phrase to your application
-* Attach screenshots
+* Optionally, you can upload [screenshots](https://support.phrase.com/hc/en-us/articles/5822309698204-Screenshot-Management-Strings) and attach them to the corresponding keys in Phrase, by using the Phrase window. The screenshots are then shown in the Phrase editor and can, along with the description, help the translators understand the context of the translation

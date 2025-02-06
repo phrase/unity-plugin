@@ -45,3 +45,7 @@ It shows all the text objects from the selection which are connected to a string
 The user can also open the key in Phrase editor (in external browser tab) by clicking on “Open in Phrase” next to the key name, and copy the key name to the clipboard.
 
 There is also a button for exporting a screenshot (current game view) to Phrase, which will also attach the uploaded screenshot to all listed Phrase keys.
+
+Metadata editing is also available in the String Table Collection editor, in the “Phrase” tab:
+
+![Phrase Metadata in String Table Collection](phrase_metadata.png)
