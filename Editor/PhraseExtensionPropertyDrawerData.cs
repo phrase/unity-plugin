@@ -19,8 +19,13 @@ namespace Phrase
 
         private Texture icon;
 
+        private float height = 0;
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
+            var extension = property.GetActualObjectForSerializedProperty<PhraseExtension>(fieldInfo);
+            var collection = extension.TargetCollection as StringTableCollection;
+
             EditorGUI.BeginProperty(position, label, property);
             position.yMin += EditorGUIUtility.standardVerticalSpacing;
             position.height = EditorGUIUtility.singleLineHeight;
@@ -35,10 +40,19 @@ namespace Phrase
             m_provider = property.FindPropertyRelative("m_provider");
             EditorGUI.PropertyField(position, m_provider);
             position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
-            EditorGUI.PropertyField(position, m_identifierType);
+            EditorGUI.PropertyField(position, m_identifierType, new GUIContent("Only keys matching", "Optionally, pull only keys matching the given prefix or tag."));
             position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
-            EditorGUI.PropertyField(position, m_identifier);
-            position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
+            switch (extension.m_identifierType)
+            {
+                case TableIdentifierType.KeyPrefix:
+                    EditorGUI.PropertyField(position, m_identifier, new GUIContent("Prefix", "Only keys with this prefix will be pulled. When pushed, all the keys from this table will be prefixed with this string"));
+                    position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
+                    break;
+                case TableIdentifierType.Tag:
+                    EditorGUI.PropertyField(position, m_identifier, new GUIContent("Tag Name", "Only keys with this tag will be pulled. When pushed, all the keys from this table will be tagged with this tag"));
+                    position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
+                    break;
+            }
 
             if (m_provider.objectReferenceValue != null)
             {
@@ -47,29 +61,26 @@ namespace Phrase
                     var buttonWidth = position.width / 2 - EditorGUIUtility.standardVerticalSpacing;
                     var buttonPosition = position;
                     buttonPosition.width = buttonWidth;
-                    if (GUI.Button(buttonPosition, "Push"))
+                    if (GUI.Button(buttonPosition, new GUIContent($"Push {provider.LocaleIdsToPush.Count} locale(s)", "Push the table content to Phrase")))
                     {
-                        var extension = property.GetActualObjectForSerializedProperty<PhraseExtension>(fieldInfo);
-                        var collection = extension.TargetCollection as StringTableCollection;
                         EditorCoroutineUtility.StartCoroutineOwnerless(provider.PushAll(new List<StringTableCollection> { collection }));
                     }
 
                     buttonPosition.x += buttonWidth + EditorGUIUtility.standardVerticalSpacing;
-                    if (GUI.Button(buttonPosition, "Pull"))
+                    if (GUI.Button(buttonPosition, new GUIContent($"Pull {provider.LocaleIdsToPull.Count} locale(s)", "Pull the table content from Phrase")))
                     {
-                        var extension = property.GetActualObjectForSerializedProperty<PhraseExtension>(fieldInfo);
-                        var collection = extension.TargetCollection as StringTableCollection;
                         EditorCoroutineUtility.StartCoroutineOwnerless(provider.Pull(new List<StringTableCollection> { collection }));
                     }
                     position.y += position.height + EditorGUIUtility.standardVerticalSpacing;
                 }
             }
+            height = position.y;
             EditorGUI.EndProperty();
         }
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            return EditorGUIUtility.singleLineHeight * 5 + EditorGUIUtility.standardVerticalSpacing * 2;
+            return height;
         }
     }
 }
