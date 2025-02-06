@@ -48,4 +48,6 @@ There is also a button for exporting a screenshot (current game view) to Phrase,
 
 Metadata editing is also available in the String Table Collection editor, in the “Phrase” tab:
 
-![Phrase Metadata in String Table Collection](phrase_metadata.png)
+![Access Metadata in String Table Collection](table_metadata.png)
+
+![Edit Metadata in String Table Collection](table_metadata_details.png)
