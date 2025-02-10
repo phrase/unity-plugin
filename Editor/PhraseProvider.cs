@@ -143,7 +143,6 @@ namespace Phrase
         public void FetchProjects()
         {
             EditorCoroutineUtility.StartCoroutineOwnerless(FetchProjectsAsync());
-            // FetchLocales();
         }
 
         public IEnumerator FetchLocalesAsync()
@@ -271,7 +270,6 @@ namespace Phrase
                         var matchingStringTable = collection.StringTables.FirstOrDefault(st => st.LocaleIdentifier.Code == locale.code);
                         if (matchingStringTable == null)
                         {
-                            // Debug.LogError("No matching string table found for locale " + locale.code);
                             break;
                         }
                         const string dir = "Temp/";
@@ -289,7 +287,6 @@ namespace Phrase
                 collectionsIndex++;
             }
             EditorUtility.ClearProgressBar();
-            // EditorUtility.DisplayDialog("Push complete", $"{count} locale(s) from {collections.Count} table collection(s) pushed.", "OK");
         }
 
         public void PullAll()
@@ -576,7 +573,7 @@ namespace Phrase
             if (phraseProvider.MissingLocalesLocally().Count > 0)
             {
                 EditorGUILayout.BeginHorizontal();
-                GUILayout.Label("Locales missing in Unity");
+                GUILayout.Label("Missing in Unity");
                 if(GUILayout.Button($"{selectedLocalesToCreateLocally.Count}/{phraseProvider.MissingLocalesLocally().Count} selected", GUILayout.Width(150)))
                 {
                     m_showLocalLocalesMissing = !m_showLocalLocalesMissing;
@@ -658,7 +655,7 @@ namespace Phrase
             {
                 EditorGUI.indentLevel++;
                 EditorGUILayout.BeginHorizontal();
-                GUILayout.Label("Locales missing in Phrase");
+                GUILayout.Label("Missing in Phrase");
                 if(GUILayout.Button($"{selectedLocalesToCreateRemotely.Count}/{phraseProvider.MissingLocalesRemotely().Count} selected", GUILayout.Width(150)))
                 {
                     m_showRemoteLocalesMissing = !m_showRemoteLocalesMissing;
@@ -742,11 +739,17 @@ namespace Phrase
                 {
                     var extension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
                     bool selectedState = extension != null && extension.m_provider != null;
+                    EditorGUILayout.BeginHorizontal();
                     bool newSelectedState = EditorGUILayout.ToggleLeft(collection.name, selectedState);
+                    if (GUILayout.Button("Go to", GUILayout.Width(50)))
+                    {
+                        Selection.activeObject = collection;
+                    }
                     if (newSelectedState != selectedState)
                     {
                         TogglePhraseExtension(collection, newSelectedState);
                     }
+                    EditorGUILayout.EndHorizontal();
                 }
             }
             EditorGUI.indentLevel--;
@@ -793,7 +796,6 @@ namespace Phrase
             if (GUILayout.Button("Push to Phrase", GUILayout.Width(150)))
             {
                 EditorCoroutineUtility.StartCoroutineOwnerless(phraseProvider.PushAll(PhraseProvider.ConnectedStringTableCollections()));
-                // phraseProvider.PushAll();
             }
 
             EditorGUILayout.EndHorizontal();

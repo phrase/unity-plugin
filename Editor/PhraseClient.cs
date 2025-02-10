@@ -119,7 +119,6 @@ namespace Phrase
         {
             this.Provider = provider;
             this.Client = new HttpClient(new RetryHandler(new HttpClientHandler(), provider));
-            // Client.DefaultRequestHeaders.Add("Authorization", "Bearer " + AccessToken);
             Client.DefaultRequestHeaders.Add("User-Agent", $"Unity Plugin/{Version}");
             Client.BaseAddress = new Uri(ApiUrl);
         }
