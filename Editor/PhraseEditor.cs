@@ -93,7 +93,7 @@ namespace Phrase
       return null;
     }
 
-    private IEnumerator UploadScreenshots(Transform[] gameObjects)
+    private IEnumerator UploadScreenshots(TranslatableObject[] translatableObjects)
     {
       string screenshotPath = "Temp/phrase_screenshot.png";
       System.IO.File.Delete(screenshotPath);
@@ -102,16 +102,8 @@ namespace Phrase
 
       yield return new WaitForEndOfFrame();
 
-      var groupedObjectsByProvider = gameObjects.GroupBy(x => {
-        SharedTableData sharedTableData = SharedTableData(x);
-        PhraseProvider provider = Provider(sharedTableData);
-        return provider;
-      }).ToDictionary(g => g.Key, g => g.Select(x => {
-        var localizedString = LocalizedString(x);
-        var sharedTableData = SharedTableData(localizedString);
-        var keyName = KeyName(localizedString, sharedTableData);
-        return PhraseMetadata(sharedTableData, keyName);
-      }).ToList());
+      var groupedObjectsByProvider = translatableObjects.GroupBy(x => x.provider)
+      .ToDictionary(g => g.Key, g => g.Select(x => x.metadata).ToList());
 
       foreach (var group in groupedObjectsByProvider)
       {
@@ -120,12 +112,25 @@ namespace Phrase
       }
       System.IO.File.Delete(screenshotPath);
 
-      EditorUtility.DisplayDialog($"Upload Screenshot", $"Screenshot uploaded for {gameObjects.Length} key(s)", "OK");
+      EditorUtility.DisplayDialog($"Upload Screenshot", $"Screenshot uploaded for {translatableObjects.Length} key(s)", "OK");
     }
 
     private Vector2 scrollPosition;
 
-    private Transform[] translatableObjects;
+    /// <summary>
+    /// Hold the game object together with its LocalizedString and PhraseMetadata
+    /// </summary>
+    private struct TranslatableObject
+    {
+      public Transform gameObject;
+      public LocalizedString localizedString;
+      public SharedTableData sharedTableData;
+      public PhraseProvider provider;
+      public string keyName;
+      public PhraseMetadata metadata;
+    }
+
+    private TranslatableObject[] translatableObjects;
 
     public void OnGUI()
     {
@@ -137,54 +142,44 @@ namespace Phrase
         return;
       }
       scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
-      foreach (var gameObject in translatableObjects)
+      foreach (var translatableObject in translatableObjects)
       {
-        LocalizedString localizedString = LocalizedString(gameObject);
-        SharedTableData sharedTableData = SharedTableData(localizedString);
-        PhraseProvider provider = Provider(sharedTableData);
-        string keyName = KeyName(localizedString, sharedTableData);
-        PhraseMetadata metadata = PhraseMetadata(sharedTableData, keyName);
-        if (metadata == null)
-        {
-          metadata = new PhraseMetadata();
-          sharedTableData.GetEntry(keyName).Metadata.AddMetadata(metadata);
-        }
         EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.LabelField(gameObject.name, EditorStyles.boldLabel);
-        if (metadata.KeyId != null)
+        EditorGUILayout.LabelField(translatableObject.gameObject.name, EditorStyles.boldLabel);
+        if (translatableObject.metadata.KeyId != null)
         {
           if (GUILayout.Button("Open in Phrase", GUILayout.Width(100)))
           {
-            Application.OpenURL(provider.KeyUrl(metadata.KeyId));
+            Application.OpenURL(translatableObject.provider.KeyUrl(translatableObject.metadata.KeyId));
           }
         }
-        if (!string.IsNullOrEmpty(metadata.ScreenshotUrl))
+        if (!string.IsNullOrEmpty(translatableObject.metadata.ScreenshotUrl))
         {
           if (GUILayout.Button("Open Screenshot", GUILayout.Width(150)))
           {
-            Application.OpenURL(metadata.ScreenshotUrl);
+            Application.OpenURL(translatableObject.metadata.ScreenshotUrl);
           }
         }
         EditorGUILayout.EndHorizontal();
-        if (keyName != null)
+        if (translatableObject.keyName != null)
         {
           EditorGUI.indentLevel++;
           EditorGUILayout.BeginHorizontal();
-          EditorGUILayout.LabelField("Phrase Key", keyName);
-          if (metadata.KeyId != null)
+          EditorGUILayout.LabelField("Phrase Key", translatableObject.keyName);
+          if (translatableObject.metadata.KeyId != null)
           {
             if (GUILayout.Button("Copy", GUILayout.Width(50)))
             {
-              EditorGUIUtility.systemCopyBuffer = keyName;
+              EditorGUIUtility.systemCopyBuffer = translatableObject.keyName;
             }
-            if (metadata.ScreenshotId != null)
+            if (translatableObject.metadata.ScreenshotId != null)
             {
               hasScreenshots = true;
             }
           }
           EditorGUILayout.EndHorizontal();
-          metadata.Description = EditorGUILayout.TextField("Description", metadata.Description);
-          metadata.MaxLength = EditorGUILayout.IntField(new GUIContent("Max Length", "set 0 for no limit"), metadata.MaxLength);
+          translatableObject.metadata.Description = EditorGUILayout.TextField("Description", translatableObject.metadata.Description);
+          translatableObject.metadata.MaxLength = EditorGUILayout.IntField(new GUIContent("Max Length", "set 0 for no limit"), translatableObject.metadata.MaxLength);
           EditorGUI.indentLevel--;
         }
       }
@@ -203,15 +198,34 @@ namespace Phrase
     public void OnSelectionChange()
     {
       // This finds all selected GameObjects and their children that have a LocalizedString component
-      // TODO: check how it behaves with lots of objects
       translatableObjects = Selection.transforms
         ?.SelectMany(x => x.GetComponentsInChildren<Transform>())
-        ?.Where(x => {
-          var localizedString = LocalizedString(x);
-          if (localizedString == null) return false;
-          var sharedTableData = SharedTableData(localizedString);
-          var provider = Provider(sharedTableData);
-          return provider != null;
+        ?.Select(x => new TranslatableObject
+        {
+          gameObject = x,
+          localizedString = LocalizedString(x),
+          sharedTableData = SharedTableData(x)
+        })
+        ?.Where(x => x.localizedString != null && x.sharedTableData != null)
+        ?.Select(x => {
+          var provider = Provider(x.sharedTableData);
+          var keyName = KeyName(x.localizedString, x.sharedTableData);
+          var metadata = PhraseMetadata(x.sharedTableData, KeyName(x.localizedString, x.sharedTableData));
+          if (metadata == null)
+          {
+            metadata = new PhraseMetadata();
+            x.sharedTableData.GetEntry(keyName).Metadata.AddMetadata(metadata);
+          }
+
+          return new TranslatableObject
+          {
+            gameObject = x.gameObject,
+            localizedString = x.localizedString,
+            sharedTableData = x.sharedTableData,
+            provider = provider,
+            keyName = keyName,
+            metadata = metadata
+          };
         })
         ?.ToArray();
       Repaint();
