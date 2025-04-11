@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.0 - 2025-04-11
+
+Multiple fixes and improvements:
+* Address UE2021 compatibility and project building issues
+* Use locale name when pushing to Phrase
+* Do not refetch locales whenever provider is shown
+* Use SetDirty to mark the asset for save
+* Key prefix constraint push/pull improvements
+* UX improvements on table extension drawer
+* Add link to connected tables
+* Optimize Phrase window by pre-calculating localization data
+* Usage documentation moved to Phrase Help Center
+
 ## 1.1.0 - 2024-11-28
 
 Add optional VS attribution

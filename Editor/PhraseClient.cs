@@ -60,7 +60,7 @@ namespace Phrase
 
     public class PhraseClient
     {
-        private readonly string Version = "1.1.0";
+        private readonly string Version = "1.2.0";
 
         private readonly PhraseProvider Provider;
 
