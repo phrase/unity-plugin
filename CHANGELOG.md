@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.1 - 2025-07-09
+- FIX: Move PhraseMetadata to Runtime so standalone builds no longer crash
+
 ## 1.2.0 - 2025-04-11
 
 Multiple fixes and improvements:
