@@ -10,7 +10,13 @@ In order to get started with Unity Localization, refer to the [guide](https://do
 
 After you create initial set of locales and one or more String Table Collections, and connect them with some text objects (and/or start using them programmatically from your Unity scripts), you can install and start using Phrase Plugin, which can be installed in following ways:
 
-* Install from the Asset Store (TBA)
+* Install from the [Asset Store](https://assetstore.unity.com/packages/tools/localization/phrase-a-better-way-to-localize-games-294442)
+  * Open **Window → Asset Store** (or press `Ctrl+9` / `Cmd+9`)
+  * Search for **"Phrase – A Better Way to Localize Games"**
+  * Click **Add to My Assets**
+  * In Unity Hub or Unity Editor, open **Package Manager** (Window → Package Manager)
+  * Select the package under **My Assets** and click **Download** (if not already)
+  * Click **Import** to add it into your project
 * Install from package archive
   * Assets → Import Package → Custom Package… → choose `.unitypackage` file from disk
 * Install from locally checked out source code
