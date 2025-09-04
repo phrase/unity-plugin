@@ -17,8 +17,6 @@ After you create initial set of locales and one or more String Table Collections
   * In Unity Hub or Unity Editor, open **Package Manager** (Window → Package Manager)
   * Select the package under **My Assets** and click **Download** (if not already)
   * Click **Import** to add it into your project
-* Install from package archive
-  * Assets → Import Package → Custom Package… → choose `.unitypackage` file from disk
 * Install from locally checked out source code
   * Either check out the source directly into `YourProject/Packages/com.phrase.plugin` directory, or
   * symlink `unity_plugin` directory into `YourProject/Packages` as `com.phrase.plugin`
