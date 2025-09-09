@@ -231,13 +231,18 @@ namespace Phrase
             Client.DeleteAsync(url);
         }
 
-        public async Task<Key> GetKey(string projectID, string keyName)
+        public async Task<List<Key>> GetKeys(string projectID, List<string> keyNames)
         {
-            string url = string.Format($"projects/{{0}}/keys?q=name:{WebUtility.UrlEncode(keyName)}", projectID);
+            string url = string.Format($"projects/{{0}}/keys?q=name:{WebUtility.UrlEncode(string.Join(",", keyNames))}", projectID);
             HttpResponseMessage response = await Client.GetAsync(url);
             response.EnsureSuccessStatusCode();
             string jsonResponse = await response.Content.ReadAsStringAsync();
-            List<Key> keys = JsonConvert.DeserializeObject<List<Key>>(jsonResponse);
+            return JsonConvert.DeserializeObject<List<Key>>(jsonResponse);
+        }
+
+        public async Task<Key> GetKey(string projectID, string keyName)
+        {
+            var keys = await GetKeys(projectID, new List<string> { keyName });
             return keys.Find(k => k.name == keyName);
         }
 

@@ -102,8 +102,17 @@ namespace Phrase
 
       yield return new WaitForEndOfFrame();
 
-      var groupedObjectsByProvider = translatableObjects.GroupBy(x => x.provider)
-      .ToDictionary(g => g.Key, g => g.Select(x => x.metadata).ToList());
+
+      var groupedObjectsByProvider = translatableObjects
+      .GroupBy(x => x.provider)
+      .ToDictionary(
+        g => g.Key,
+        g => g.Select(x => new KeyScreenshotMeta
+        {
+          name = x.keyName,
+          metadata = x.metadata
+        }).ToList()
+      );
 
       foreach (var group in groupedObjectsByProvider)
       {

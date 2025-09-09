@@ -33,6 +33,11 @@ namespace Phrase
         Token,
         Oauth
     }
+    public class KeyScreenshotMeta
+    {
+        public string name;
+        public PhraseMetadata metadata;
+    }
 
     [CreateAssetMenu(fileName = "Phrase", menuName = "Localization/Phrase")]
     public partial class PhraseProvider : ScriptableObject
@@ -399,8 +404,24 @@ namespace Phrase
             AssetDatabase.StopAssetEditing();
         }
 
-        public async void UploadScreenshot(List<PhraseMetadata> metadataList, string path)
+        public async void UploadScreenshot(List<KeyScreenshotMeta> keyMetadataPairs, string path)
         {
+            var metadataWithNoKeyId = keyMetadataPairs.Where(m => string.IsNullOrEmpty(m.metadata.KeyId)).ToList();
+            if (metadataWithNoKeyId.Count > 0)
+            {
+                Debug.Log("Screenshot upload: KeyId is not present for at least one of the selected keys, fetching metadata from Phrase.");
+                var phraseKeys = await Client.GetKeys(m_selectedProjectId, metadataWithNoKeyId.Select(m => m.name).ToList());
+                foreach (var metadata in metadataWithNoKeyId)
+                {
+                    var matchingKey = phraseKeys.FirstOrDefault(k => k.name == metadata.name);
+                    if (matchingKey != null)
+                    {
+                        metadata.metadata.KeyId = matchingKey.id;
+                    }
+                }
+            }
+
+            var metadataList = keyMetadataPairs.Select(m => m.metadata).ToList();
             string name = "screenshot_" + System.DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
             Screenshot screenshot = await Client.UploadScreenshot(m_selectedProjectId, name, path);
 
@@ -416,7 +437,6 @@ namespace Phrase
 
                     if (metadata.KeyId == "" || metadata.KeyId == null)
                     {
-                        Debug.LogError("Screenshot upload: KeyId is not present for at least one of the selected keys, please synchronize your keys with Phrase first.");
                         continue;
                     }
 
