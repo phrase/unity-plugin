@@ -286,12 +286,23 @@ namespace Phrase
                 }
                 collectionsIndex++;
             }
+            _ = PullForMetadataUpdate(collections, Locales.FirstOrDefault());
             EditorUtility.ClearProgressBar();
         }
 
         public void PullAll()
         {
             EditorCoroutineUtility.StartCoroutineOwnerless(Pull(ConnectedStringTableCollections()));
+        }
+
+        private async Task PullForMetadataUpdate(List<StringTableCollection> collections, Locale locale)
+        {
+            foreach (var collection in collections)
+            {
+                AssetDatabase.StartAssetEditing();
+                await PullSingleLocaleAsync(collection, locale, true);
+                AssetDatabase.StopAssetEditing();
+            }
         }
 
         private List<CsvColumns> ColumnMappings(Locale locale, string keyPrefix)
@@ -308,7 +319,18 @@ namespace Phrase
             };
         }
 
-        private async void PullSingleLocale(StringTableCollection collection, Locale selectedLocale)
+        // We don't want to update translations,just fetching for key metadata
+        private List<CsvColumns> EmptyPullColumnMappings(string keyPrefix)
+        {
+            return new List<CsvColumns>
+            {
+                new PhraseCsvColumns {
+                    KeyPrefix = keyPrefix
+                }
+            };
+        }
+
+        private async void PullSingleLocale(StringTableCollection collection, Locale selectedLocale, bool emptyPull = false)
         {
             Log("Downloading locale " + selectedLocale.code);
             var phraseExtension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
@@ -317,7 +339,21 @@ namespace Phrase
             var csvContent = await Client.DownloadLocale(m_selectedProjectId, selectedLocale.id, tag, keyPrefix);
             using (var reader = new StringReader(csvContent))
             {
-                var columnMappings = ColumnMappings(selectedLocale, keyPrefix);
+                var columnMappings = emptyPull ? EmptyPullColumnMappings(keyPrefix) : ColumnMappings(selectedLocale, keyPrefix);
+                Csv.ImportInto(reader, collection, columnMappings);
+            }
+        }
+
+        private async Task PullSingleLocaleAsync(StringTableCollection collection, Locale selectedLocale, bool emptyPull = false)
+        {
+            Log("Downloading locale async for metadata update" + selectedLocale.code);
+            var phraseExtension = collection.Extensions.FirstOrDefault(e => e is PhraseExtension) as PhraseExtension;
+            string tag = phraseExtension.m_identifierType == TableIdentifierType.Tag ? phraseExtension.m_identifier : null;
+            string keyPrefix = phraseExtension.m_identifierType == TableIdentifierType.KeyPrefix ? phraseExtension.m_identifier : null;
+            var csvContent = await Client.DownloadLocale(m_selectedProjectId, selectedLocale.id, tag, keyPrefix);
+            using (var reader = new StringReader(csvContent))
+            {
+                var columnMappings = emptyPull ? EmptyPullColumnMappings(keyPrefix) : ColumnMappings(selectedLocale, keyPrefix);
                 Csv.ImportInto(reader, collection, columnMappings);
             }
         }
@@ -375,6 +411,13 @@ namespace Phrase
                     if (metadata.ScreenshotMarkerId != null)
                     {
                         Client.DeleteScreenshotMarker(m_selectedProjectId, metadata.ScreenshotId, metadata.ScreenshotMarkerId);
+                    }
+
+
+                    if (metadata.KeyId == "" || metadata.KeyId == null)
+                    {
+                        Debug.LogError("KeyId is not present for at least one of the selected keys, please synchronize your keys with Phrase first.");
+                        continue;
                     }
 
                     ScreenshotMarker marker = await Client.CreateScreenshotMarker(m_selectedProjectId, screenshot.id, metadata.KeyId);
@@ -904,6 +947,7 @@ namespace Phrase
                 }
                 EditorGUI.indentLevel--;
             }
+
         }
 
         /// <summary>
