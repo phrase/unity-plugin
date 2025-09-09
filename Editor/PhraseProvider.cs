@@ -416,7 +416,7 @@ namespace Phrase
 
                     if (metadata.KeyId == "" || metadata.KeyId == null)
                     {
-                        Debug.LogError("KeyId is not present for at least one of the selected keys, please synchronize your keys with Phrase first.");
+                        Debug.LogError("Screenshot upload: KeyId is not present for at least one of the selected keys, please synchronize your keys with Phrase first.");
                         continue;
                     }
 
