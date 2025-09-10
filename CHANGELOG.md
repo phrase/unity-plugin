@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.2 - 2025-09-10
+- FIX: Attaching screenshots to keys without KeyId populated in their metadata
+
 ## 1.2.1 - 2025-07-09
 - FIX: Move PhraseMetadata to Runtime so standalone builds no longer crash
 
