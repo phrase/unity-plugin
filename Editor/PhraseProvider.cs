@@ -374,7 +374,8 @@ namespace Phrase
             if (metadataWithNoKeyId.Count > 0)
             {
                 Debug.Log("Screenshot upload: KeyId is not present for at least one of the selected keys, fetching metadata from Phrase.");
-                var phraseKeys = await Client.GetKeys(m_selectedProjectId, metadataWithNoKeyId.Select(m => m.name).ToList());
+                var escapedNames = metadataWithNoKeyId.Select(n => Regex.Replace(n.name, @"[\\\"" ,]", m => "\\" + m.Value)).ToList();
+                var phraseKeys = await Client.GetKeys(m_selectedProjectId, escapedNames);
                 foreach (var metadata in metadataWithNoKeyId)
                 {
                     var matchingKey = phraseKeys.FirstOrDefault(k => k.name == metadata.name);
