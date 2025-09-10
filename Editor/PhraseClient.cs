@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -231,14 +233,37 @@ namespace Phrase
             Client.DeleteAsync(url);
         }
 
-        public async Task<Key> GetKey(string projectID, string keyName)
+        public async Task<List<Key>> GetKeysByName(string projectID, List<string> keyNames)
         {
-            string url = string.Format($"projects/{{0}}/keys?q=name:{WebUtility.UrlEncode(keyName)}", projectID);
-            HttpResponseMessage response = await Client.GetAsync(url);
-            response.EnsureSuccessStatusCode();
-            string jsonResponse = await response.Content.ReadAsStringAsync();
-            List<Key> keys = JsonConvert.DeserializeObject<List<Key>>(jsonResponse);
-            return keys.Find(k => k.name == keyName);
+            var allKeys = new List<Key>();
+            if (keyNames == null || keyNames.Count == 0) return allKeys;
+            var escapedNames = keyNames.Select(n => Regex.Replace(n, @"[\\\"" ,]", m => "\\" + m.Value)).ToList();
+            string q = $"name:{string.Join(",", escapedNames)}";
+
+            int page = 0;
+            const int perPage = 100; // Phrase API max per_page is 100
+
+            while (true)
+            {
+                string url = $"projects/{projectID}/keys/search?page={page}&per_page={perPage}";
+                var payload = new { q = q };
+                var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await Client.PostAsync(url, content);
+                response.EnsureSuccessStatusCode();
+
+                string jsonResponse = await response.Content.ReadAsStringAsync();
+                var batch = JsonConvert.DeserializeObject<List<Key>>(jsonResponse);
+
+                if (batch == null || batch.Count == 0) break;
+
+                allKeys.AddRange(batch);
+
+                if (batch.Count < perPage) break; // no more pages
+                page++;
+            }
+
+            return allKeys;
         }
 
         private async Task<string> HttpUploadFile(string url, string path, string paramName, string contentType, NameValueCollection nvc)
