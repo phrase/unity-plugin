@@ -170,6 +170,26 @@ namespace Phrase
             EditorCoroutineUtility.StartCoroutineOwnerless(FetchLocalesAsync());
         }
 
+        /// <summary>
+        /// Phrase metadata (key ids, screenshot ids) are per-project. When switching projects,
+        /// we need to clear the metadata from the connected collections.
+        /// </summary>
+        public void ClearPhraseMetadataFromCollections()
+        {
+            foreach (var collection in ConnectedStringTableCollections())
+            {
+                foreach (var row in collection.GetRowEnumeratorUnsorted())
+                {
+                    PhraseMetadata metadata = row.KeyEntry.Metadata.GetMetadata<PhraseMetadata>();
+                    if (metadata != null)
+                    {
+                        row.KeyEntry.Metadata.RemoveMetadata(metadata);
+                        EditorUtility.SetDirty(collection);
+                    }
+                }
+            }
+        }
+
         public static List<StringTableCollection> AllStringTableCollections()
         {
             return AssetDatabase
@@ -574,6 +594,7 @@ namespace Phrase
                     phraseProvider.m_selectedProjectId = selectedProject.id;
                     phraseProvider.m_selectedAccountId = selectedProject.account.id;
                     phraseProvider.FetchLocales();
+                    phraseProvider.ClearPhraseMetadataFromCollections();
                     #if PHRASE_VS_ATTRIBUTION
                     SendAttributionEvent("ProjectAccess", "Phrase", phraseProvider.m_selectedAccountId);
                     #endif
